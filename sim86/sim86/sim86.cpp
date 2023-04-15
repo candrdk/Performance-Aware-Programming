@@ -4,6 +4,12 @@
 #include <assert.h>
 #include <string.h>
 
+#define LISTING_37 "..\\computer_enhance\\perfaware\\part1\\listing_0037_single_register_mov"
+#define LISTING_38 "..\\computer_enhance\\perfaware\\part1\\listing_0038_many_register_mov"
+#define LISTING_39 "..\\computer_enhance\\perfaware\\part1\\listing_0039_more_movs"
+#define LISTING_40 "..\\computer_enhance\\perfaware\\part1\\listing_0040_challenge_movs"
+#define LISTING_41 "..\\computer_enhance\\perfaware\\part1\\listing_0041_add_sub_cmp_jnz"
+
 typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
@@ -52,7 +58,7 @@ constexpr const u8 rm_table[8][2] = {
 constexpr const char* rm_str_table[8] = {
   "bx + si",
   "bx + di",
-  "bp + di",
+  "bp + si",
   "bp + di",
   "si",
   "di",
@@ -98,31 +104,28 @@ u8* data;
 u8* data_end;
 size_t data_count;
 
-size_t read_data(const char* path) {
+bool read_data(const char* path) {
 	FILE* file; 
 	fopen_s(&file, path, "rb");
-	if (!file) return 0;
+	if (!file) return false;
 
 	fseek(file, 0, SEEK_END);
 	const int file_size = ftell(file);
 	fseek(file, 0, SEEK_SET);
 
 	data = (u8*)malloc(file_size);
-	if (data == 0) return 0;
+	if (data == 0) return false;
 
 	data_count = fread(data, 1, file_size, file);
 	data_end = data + data_count;
 
 	fclose(file);
+	return true;
 }
 
-#define LISTING_37 "..\\computer_enhance\\perfaware\\part1\\listing_0037_single_register_mov"
-#define LISTING_38 "..\\computer_enhance\\perfaware\\part1\\listing_0038_many_register_mov"
-#define LISTING_39 "..\\computer_enhance\\perfaware\\part1\\listing_0039_more_movs"
-#define LISTING_40 "..\\computer_enhance\\perfaware\\part1\\listing_0040_challenge_movs"
 
-void print_mov(bool D, const char* dst, const char* src) {
-	printf("mov %s, %s\n", D ? dst : src, D ? src : dst);
+void print_op(const char* op, bool D, const char* dst, const char* src) {
+	printf("%s %s, %s\n", op, D ? dst : src, D ? src : dst);
 }
 
 template <size_t N>
@@ -141,32 +144,7 @@ void format_effective_address(char(&address)[N], u8 MOD, u8 RM, u8* imm) {
 	}
 }
 
-int decode_mov(u8* ptr) {
-	bool D = *ptr & 0b10;	// 1: REG is destination. 0: REG is source.
-	bool W = *ptr & 0b01;	// 1: word operation. 0: byte operation.
-	ptr++;
-
-	u8 MOD = *ptr >> 6;					// Mode
-	u8 REG = (*ptr & 0b111000) >> 3;	// Register
-	u8 RM = *ptr & 0b111;				// Register/Memory
-	ptr++;
-	int used_bytes = 2;
-
-	if (MOD == 0b11) {	// Register to register - no displacement.
-		print_mov(D, get_reg_name(REG, W), get_reg_name(RM, W));
-		return used_bytes;
-	}
-
-	char address[32] = {};
-	format_effective_address(address, MOD, RM, ptr);
-
-	print_mov(D, get_reg_name(REG, W), address);
-	used_bytes += (MOD == 0 && RM == 0b110) ? 2 : MOD;
-
-	return used_bytes;
-}
-
-int decode_immediate_to_register(u8* ptr) {
+int decode_mov_immediate_to_register(u8* ptr) {
 	bool W = *ptr & 0b1000;
 	u8 REG = *ptr & 0b111;
 	ptr++;
@@ -175,17 +153,19 @@ int decode_immediate_to_register(u8* ptr) {
 
 	if (W) {
 		sprintf_s(immediate, "%u", *(u16*)ptr);
-		print_mov(true, get_reg_name(REG, W), immediate);
+		print_op("mov", true, get_reg_name(REG, W), immediate);
 		return 3;
 	}
 	else {
 		sprintf_s(immediate, "%u", *ptr);
-		print_mov(true, get_reg_name(REG, W), immediate);
+		print_op("mov", true, get_reg_name(REG, W), immediate);
 		return 2;
 	}
 }
 
-int decode_immediate_to_memory(u8* ptr) {
+int decode_mov_immediate_to_memory(u8* ptr) {
+	int used_bytes = 2;
+
 	bool W = *ptr & 1;
 	ptr++;
 
@@ -193,16 +173,14 @@ int decode_immediate_to_memory(u8* ptr) {
 	u8 RM = *ptr & 0b111;				// Register/Memory
 	ptr++;
 
-	int used_bytes = 2;
-
 	char address[32] = {};
-	if (MOD == 0b11) {	// Register to register - no displacement.
-		sprintf_s(address, "%s", get_reg_name(RM, W));
+	if (MOD == 0b11) {
+		sprintf_s(address, get_reg_name(RM, W));
 	}
 	else {
 		format_effective_address(address, MOD, RM, ptr);
 		used_bytes += (MOD == 0 && RM == 0b110) ? 2 : MOD;
-		ptr += MOD;
+		ptr += (MOD == 0 && RM == 0b110) ? 2 : MOD;
 	}
 
 	char immediate[16] = {};
@@ -211,16 +189,16 @@ int decode_immediate_to_memory(u8* ptr) {
 		used_bytes += 2;
 	}
 	else {
-		sprintf_s(immediate, "byte %u", *ptr);
+		sprintf_s(immediate, "byte %i", *(i8*)ptr);
 		used_bytes += 1;
 	}
 
-	print_mov(true, address, immediate);
+	print_op("mov", true, address, immediate);
 
 	return used_bytes;
 }
 
-int decode_accumulator_memory(u8* ptr) {
+int decode_mov_accumulator_memory(u8* ptr) {
 	bool W = *ptr & 0b01;
 	bool D = *ptr & 0b10;
 	ptr++;
@@ -233,43 +211,183 @@ int decode_accumulator_memory(u8* ptr) {
 		sprintf_s(address, "[%u]", *ptr);
 	}
 
-	print_mov(!D, get_reg_name(AX, W), address);
+	print_op("mov", !D, get_reg_name(AX, W), address);
 	return 2 + W;
+}
+
+int decode(u8* ptr) {
+	int used_bytes = 2;
+
+	// Figure out what op we are decoding
+	char op[4];
+	if ((*ptr >> 2) == 0b100010) { memcpy(op, "mov", 4); }
+	else {
+		switch ((*ptr >> 3) & 0b111) {
+		case 0b000: // ADD
+			memcpy(op, "add", 4);
+			break;
+		case 0b101: // SUB
+			memcpy(op, "sub", 4);
+			break;
+		case 0b111: // CMP
+			memcpy(op, "cmp", 4);
+			break;
+		}
+	}
+
+	bool D = *ptr & 0b10;
+	bool W = *ptr & 0b01;
+	ptr++;
+
+	u8 MOD = *ptr >> 6;
+	u8 REG = (*ptr >> 3) & 0b111;
+	u8 RM = *ptr & 0b111;
+	ptr++;
+
+	if (MOD == 0b11) {	// Register to register - no displacement.
+		print_op(op, D, get_reg_name(REG, W), get_reg_name(RM, W));
+		return used_bytes;
+	}
+
+	char address[32] = {};
+	format_effective_address(address, MOD, RM, ptr);
+
+	print_op(op, D, get_reg_name(REG, W), address);
+	used_bytes += (MOD == 0 && RM == 0b110) ? 2 : MOD;
+
+	return used_bytes;
+}
+
+int decode_imm_to_reg_mem(u8* ptr) {
+	int used_bytes = 2;
+
+	bool S = *ptr & 0b10;
+	bool W = *ptr & 0b01;
+	ptr++;
+
+	u8 MOD = *ptr >> 6;
+	u8 OP = (*ptr >> 3) & 0b111;
+	u8 RM = *ptr & 0b111;
+	ptr++;
+
+	char address[32] = {};
+	if (MOD == 0b11) {	// Register mode
+		sprintf_s(address, get_reg_name(RM, W));
+	}
+	else {				// Memory mode
+		// Since format_ takes a c-array, we cant write the effective address at 'address + 5', 
+		// so we have to do some ugly moves and copies to fix it up after.
+		format_effective_address(address, MOD, RM, ptr);
+		memmove(address + 5, address, strlen(address) + 1);
+		memcpy(address, W ? "word " : "byte ", 5);
+		used_bytes += (MOD == 0 && RM == 0b110) ? 2 : MOD;
+		ptr += (MOD == 0 && RM == 0b110) ? 2 : MOD;
+	}
+
+	char immediate[16] = {};
+	if (!S && W) {
+		sprintf_s(immediate, "%u", *(u16*)ptr);
+		used_bytes += 2;
+	}
+	else {
+		sprintf_s(immediate, "%i", S ? *(i8*)ptr : *ptr);
+		used_bytes += 1;
+	}
+
+	switch (OP) {
+	case 0b000:
+		print_op("add", true, address, immediate);
+		break;
+	case 0b101:
+		print_op("sub", true, address, immediate);
+		break;
+	case 0b111:
+		print_op("cmp", true, address, immediate);
+		break;
+	}
+
+	return used_bytes;
+}
+
+int decode_imm_acc(u8* ptr) {
+	int used_bytes = 2;
+
+	bool W = *ptr & 0b01;
+	u8 OP = (*ptr >> 3) & 0b111;
+	ptr++;
+
+	char immediate[16] = {};
+	if (W) {		// cmp doesnt support word-sized data?
+		sprintf_s(immediate, "%u", *(u16*)ptr);
+		used_bytes += 1;
+	}
+	else {
+		sprintf_s(immediate, "%i", *(i8*)ptr); // cmp is always unsigned?
+	}
+
+	switch (OP) {
+	case 0b000:
+		print_op("add", true, get_reg_name(AX, W), immediate);
+		break;
+	case 0b101:
+		print_op("sub", true, get_reg_name(AX, W), immediate);
+		break;
+	case 0b111:
+		print_op("cmp", true, get_reg_name(AX, W), immediate);
+		break;
+	}
+
+	return used_bytes;
 }
 
 int main(int argc, char* argv[]) {
 #ifdef _DEBUG
-	read_data(LISTING_40);
+	read_data(LISTING_41);
 	if (!data_count) {
 		return -1;
 	}
 #else
 	if (argc != 2) { return -1; }
-
-	switch (atoi(argv[1])) {
-	case 37:
-		read_data(LISTING_37);
-		break;
-	case 38:
-		read_data(LISTING_38);
-		break;
-	default:
-		printf("Unknown listing\n");
-		return -1;
-	}
+	if (!read_data(argv[1])) { return -1; }
 #endif
 
 	printf("bits 16\n\n");
 	
 	u8* ptr = data;
-	while(ptr < data + data_count){
-		if      ((*ptr >> 2) == 0b101000)	{ ptr += decode_accumulator_memory(ptr); }
-		else if ((*ptr >> 1) == 0b1100011)	{ ptr += decode_immediate_to_memory(ptr); } 
-		else if ((*ptr >> 4) == 0b1011)		{ ptr += decode_immediate_to_register(ptr); } 
-		else if ((*ptr >> 2) == 0b100010)	{ ptr += decode_mov(ptr); } 
+	while(ptr < data + data_count) {
+		if      ( (*ptr >> 2)			   == 0b101000)		{ ptr += decode_mov_accumulator_memory(ptr); }
+		else if ( (*ptr >> 1)			   == 0b1100011)	{ ptr += decode_mov_immediate_to_memory(ptr); } 
+		else if ( (*ptr >> 4)			   == 0b1011)		{ ptr += decode_mov_immediate_to_register(ptr); } 
+		else if ( (*ptr >> 2)              == 0b100010)		{ ptr += decode(ptr); }
+		else if (((*ptr >> 2) & 0b110001)  == 0b000000)		{ ptr += decode(ptr); }
+		else if ( (*ptr >> 2)			   == 0b100000)		{ ptr += decode_imm_to_reg_mem(ptr); }
+		else if (((*ptr >> 1) & 0b1100011) == 0b0000010)	{ ptr += decode_imm_acc(ptr); }
 		else {
-			printf("\nUnknown opcode.\n\n");
-			return -1;
+			switch (*ptr++) {
+			case 0b01110100: printf("je %i\n",		(*(i8*)ptr++)); break;	// jump on equal
+			case 0b01111100: printf("jl %i\n",		(*(i8*)ptr++)); break;	// jump on less
+			case 0b01111110: printf("jle %i\n",		(*(i8*)ptr++)); break;	// jump on less or equal
+			case 0b01110010: printf("jb %i\n",		(*(i8*)ptr++)); break;	// jump on below
+			case 0b01110110: printf("jbe %i\n",		(*(i8*)ptr++)); break;	// jump on below or equal
+			case 0b01111010: printf("jp %i\n",		(*(i8*)ptr++)); break;	// jump on parity
+			case 0b01110000: printf("jo %i\n",		(*(i8*)ptr++)); break;	// jump on overflow
+			case 0b01111000: printf("js %i\n",		(*(i8*)ptr++)); break;	// jump on sign
+			case 0b01110101: printf("jne %i\n",		(*(i8*)ptr++)); break;	// jump on not equal
+			case 0b01111101: printf("jnl %i\n",		(*(i8*)ptr++)); break;	// jump on not less
+			case 0b01111111: printf("jnle %i\n",	(*(i8*)ptr++)); break;	// jump on not less or equal
+			case 0b01110011: printf("jnb %i\n",		(*(i8*)ptr++)); break;	// jump on not below
+			case 0b01110111: printf("jnbe %i\n",	(*(i8*)ptr++)); break;	// jump on not below or equal
+			case 0b01111011: printf("jnp %i\n",		(*(i8*)ptr++)); break;	// jump on not parity
+			case 0b01110001: printf("jno %i\n",		(*(i8*)ptr++)); break;	// jump on not overflow
+			case 0b01111001: printf("jns %i\n",		(*(i8*)ptr++)); break;	// jump on not sign
+			case 0b11100010: printf("loop %i\n",	(*(i8*)ptr++)); break;	// loop CX times
+			case 0b11100001: printf("loopz %i\n",	(*(i8*)ptr++)); break;	// loop while zero
+			case 0b11100000: printf("loopnz %i\n",	(*(i8*)ptr++)); break;	// loop while not zero
+			case 0b11100011: printf("jcxz %i\n",	(*(i8*)ptr++)); break;	// jump on CX zero
+			default:
+				printf("\nUnknown opcode.\n\n");
+				return -1;
+			}
 		}
 	}
 
