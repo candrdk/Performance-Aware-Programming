@@ -5,11 +5,25 @@
 #include <string.h>
 
 typedef uint8_t u8;
-typedef int8_t i8;
 typedef uint16_t u16;
-typedef int16_t i16;
+typedef uint32_t u32;
+typedef uint64_t u64;
 
-static const char* register_names[] = {
+typedef int8_t i8;
+typedef int16_t i16;
+typedef int32_t i32;
+typedef int64_t i64;
+
+enum : u8 {
+	AX, CX, DX, BX,
+	SP, BP, SI, DI
+};
+enum : u8 {
+	AL, CL, DL, BL,
+	AH, CH, DH, BH
+};
+
+constexpr const char register_names[][3] = {
 	"al", "cl",
 	"dl", "bh",
 	"ah", "ch",
@@ -20,22 +34,33 @@ static const char* register_names[] = {
 	"si", "di"
 };
 
-static char const* get_reg_name(u8 reg, bool word) {
+constexpr const char* get_reg_name(u8 reg, bool word = true) {
 	return register_names[reg | (word << 3)];
 }
 
-namespace REGISTER {
-	enum : u8 {
-		AX, CX, DX, BX,
-		SP, BP, SI, DI
-	};
-	enum : u8 {
-		AL, CL, DL, BL,
-		AH, CH, DH, BH
-	};
-}
+constexpr const u8 rm_table[8][2] = {
+	{ 0b011, 0b110 },	// bx + si
+	{ 0b011, 0b111 },	// bx + di
+	{ 0b101, 0b110 },	// bp + si
+	{ 0b101, 0b111 },	// bp + di
+	{ 0b110 },			// si
+	{ 0b111 },			// di
+	{ 0b101 },			// bp / direct address
+	{ 0b011 }			// bx
+};
 
-static struct {
+constexpr const char* rm_str_table[8] = {
+  "bx + si",
+  "bx + di",
+  "bp + di",
+  "bp + di",
+  "si",
+  "di",
+  "bp",
+  "bx"
+};
+
+struct {
 	union {
 		struct {
 			union {
@@ -73,17 +98,6 @@ u8* data;
 u8* data_end;
 size_t data_count;
 
-constexpr u8 rm_table[8][2] = {
-	{ 0b011, 0b110 },	// bx + si
-	{ 0b011, 0b111 },	// bx + di
-	{ 0b101, 0b110 },	// bp + si
-	{ 0b101, 0b111 },	// bp + di
-	{ 0b110 },			// si
-	{ 0b111 },			// di
-	{ 0b101 },			// direct address
-	{ 0b011 }			// bx
-};
-
 size_t read_data(const char* path) {
 	FILE* file; 
 	fopen_s(&file, path, "rb");
@@ -113,70 +127,21 @@ void print_mov(bool D, const char* dst, const char* src) {
 
 template <size_t N>
 void format_effective_address(char(&address)[N], u8 MOD, u8 RM, u8* imm) {
-	switch (MOD) {
-	case 0b00: {	// No displacement follows.
-		if (RM == 0b110) {						// Special case for direct addresses.
-			assert(imm + 1 < data_end);
-			sprintf_s(address, "[%i]", *(u16*)imm);
+	if (MOD == 0b00) {	// No displacement follows.
+		if (RM == 0b110) {	// Special case for direct addresses
+			sprintf_s(address, "[%u]", *(u16*)imm);
 		}
-		else if (RM & 0b100) {					// Only one reg in effective address calculation.
-			sprintf_s(address, "[%s]", get_reg_name(rm_table[RM][0], true));
+		else {	// Only regs in effective address calculation
+			sprintf_s(address, "[%s]", rm_str_table[RM]);
 		}
-		else {									// Two regs in effective address calculation.
-			sprintf_s(address, "[%s + %s]", get_reg_name(rm_table[RM][0], true), get_reg_name(rm_table[RM][1], true));
-		}
-		break;
 	}
-
-	case 0b01: {	// Byte displacement follows.
-		assert(imm < data_end);
-		i8 disp = *(i8*)imm;
-		if (RM & 0b100) {						// Only one reg in effective address calculation.
-			if (disp < 0) {
-				sprintf_s(address, "[%s - %i]", get_reg_name(rm_table[RM][0], true), disp * -1);
-			}
-			else {
-				sprintf_s(address, "[%s + %i]", get_reg_name(rm_table[RM][0], true), disp);
-			}
-		}
-		else {									// Two regs in effective address calculation.
-			if (disp < 0) {
-				sprintf_s(address, "[%s + %s - %i]", get_reg_name(rm_table[RM][0], true), get_reg_name(rm_table[RM][1], true), disp * -1);
-			}
-			else {
-				sprintf_s(address, "[%s + %s + %i]", get_reg_name(rm_table[RM][0], true), get_reg_name(rm_table[RM][1], true), disp);
-			}
-		}
-		break;
-	}
-
-	case 0b10: {	// Word displacement follows.
-		assert(imm + 1 < data_end);
-		i16 disp = *(i16*)imm;
-		if (RM & 0b100) {						// Only one reg in effective address calculation.
-			if (disp < 0) {
-				sprintf_s(address, "[%s - %i]", get_reg_name(rm_table[RM][0], true), disp * -1);
-			}
-			else {
-				sprintf_s(address, "[%s + %i]", get_reg_name(rm_table[RM][0], true), disp);
-			}
-		}
-		else {									// Two regs in effective address calculation.
-			if (disp < 0) {
-				sprintf_s(address, "[%s + %s - %i]", get_reg_name(rm_table[RM][0], true), get_reg_name(rm_table[RM][1], true), disp * -1);
-			}
-			else {
-				sprintf_s(address, "[%s + %s + %i]", get_reg_name(rm_table[RM][0], true), get_reg_name(rm_table[RM][1], true), disp);
-			}
-		}
-		break;
-	}
+	else {		// Word or byte displacement follows
+		i16 idisp = (MOD == 1) ? (*(i8*)imm) : (*(i16*)imm);	// Sign extension
+		sprintf_s(address, "[%s %c %u]", rm_str_table[RM], idisp < 0 ? '-' : '+', idisp < 0 ? -idisp : idisp);
 	}
 }
 
 int decode_mov(u8* ptr) {
-	assert(ptr + 1 < data_end);
-
 	bool D = *ptr & 0b10;	// 1: REG is destination. 0: REG is source.
 	bool W = *ptr & 0b01;	// 1: word operation. 0: byte operation.
 	ptr++;
@@ -193,10 +158,10 @@ int decode_mov(u8* ptr) {
 	}
 
 	char address[32] = {};
-	used_bytes += (MOD == 0 && RM == 0b110) ? 2 : MOD;
-
 	format_effective_address(address, MOD, RM, ptr);
+
 	print_mov(D, get_reg_name(REG, W), address);
+	used_bytes += (MOD == 0 && RM == 0b110) ? 2 : MOD;
 
 	return used_bytes;
 }
@@ -243,14 +208,16 @@ int decode_immediate_to_memory(u8* ptr) {
 	char immediate[16] = {};
 	if (W) {
 		sprintf_s(immediate, "word %u", *(u16*)ptr);
-		print_mov(true, address, immediate);
-		return used_bytes + 2;
+		used_bytes += 2;
 	}
 	else {
 		sprintf_s(immediate, "byte %u", *ptr);
-		print_mov(true, address, immediate);
-		return used_bytes + 1;
+		used_bytes += 1;
 	}
+
+	print_mov(true, address, immediate);
+
+	return used_bytes;
 }
 
 int decode_accumulator_memory(u8* ptr) {
@@ -266,7 +233,7 @@ int decode_accumulator_memory(u8* ptr) {
 		sprintf_s(address, "[%u]", *ptr);
 	}
 
-	print_mov(!D, get_reg_name(REGISTER::AX, W), address);
+	print_mov(!D, get_reg_name(AX, W), address);
 	return 2 + W;
 }
 
@@ -296,7 +263,7 @@ int main(int argc, char* argv[]) {
 	
 	u8* ptr = data;
 	while(ptr < data + data_count){
-		if ((*ptr >> 2) == 0b101000)		{ ptr += decode_accumulator_memory(ptr); }
+		if      ((*ptr >> 2) == 0b101000)	{ ptr += decode_accumulator_memory(ptr); }
 		else if ((*ptr >> 1) == 0b1100011)	{ ptr += decode_immediate_to_memory(ptr); } 
 		else if ((*ptr >> 4) == 0b1011)		{ ptr += decode_immediate_to_register(ptr); } 
 		else if ((*ptr >> 2) == 0b100010)	{ ptr += decode_mov(ptr); } 
