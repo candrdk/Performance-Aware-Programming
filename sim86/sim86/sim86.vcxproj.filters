@@ -18,5 +18,34 @@
     <ClCompile Include="sim86.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="sim86_print.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sim86_decode.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="sim86_instruction_table.inl">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sim86_instruction_table.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sim86_print.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sim86_decode.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="instruction.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="sim86.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="registers.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

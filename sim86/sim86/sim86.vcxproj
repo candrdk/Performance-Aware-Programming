@@ -144,6 +144,17 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="sim86.cpp" />
+    <ClCompile Include="sim86_decode.cpp" />
+    <ClCompile Include="sim86_print.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="instruction.h" />
+    <ClInclude Include="registers.h" />
+    <ClInclude Include="sim86.h" />
+    <ClInclude Include="sim86_decode.h" />
+    <ClInclude Include="sim86_instruction_table.h" />
+    <ClInclude Include="sim86_instruction_table.inl" />
+    <ClInclude Include="sim86_print.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
