@@ -364,26 +364,26 @@ int main(int argc, char* argv[]) {
 		else if (((*ptr >> 1) & 0b1100011) == 0b0000010)	{ ptr += decode_imm_acc(ptr); }
 		else {
 			switch (*ptr++) {
-			case 0b01110100: printf("je %i\n",		(*(i8*)ptr++)); break;	// jump on equal
-			case 0b01111100: printf("jl %i\n",		(*(i8*)ptr++)); break;	// jump on less
-			case 0b01111110: printf("jle %i\n",		(*(i8*)ptr++)); break;	// jump on less or equal
-			case 0b01110010: printf("jb %i\n",		(*(i8*)ptr++)); break;	// jump on below
-			case 0b01110110: printf("jbe %i\n",		(*(i8*)ptr++)); break;	// jump on below or equal
-			case 0b01111010: printf("jp %i\n",		(*(i8*)ptr++)); break;	// jump on parity
-			case 0b01110000: printf("jo %i\n",		(*(i8*)ptr++)); break;	// jump on overflow
-			case 0b01111000: printf("js %i\n",		(*(i8*)ptr++)); break;	// jump on sign
-			case 0b01110101: printf("jne %i\n",		(*(i8*)ptr++)); break;	// jump on not equal
-			case 0b01111101: printf("jnl %i\n",		(*(i8*)ptr++)); break;	// jump on not less
-			case 0b01111111: printf("jnle %i\n",	(*(i8*)ptr++)); break;	// jump on not less or equal
-			case 0b01110011: printf("jnb %i\n",		(*(i8*)ptr++)); break;	// jump on not below
-			case 0b01110111: printf("jnbe %i\n",	(*(i8*)ptr++)); break;	// jump on not below or equal
-			case 0b01111011: printf("jnp %i\n",		(*(i8*)ptr++)); break;	// jump on not parity
-			case 0b01110001: printf("jno %i\n",		(*(i8*)ptr++)); break;	// jump on not overflow
-			case 0b01111001: printf("jns %i\n",		(*(i8*)ptr++)); break;	// jump on not sign
-			case 0b11100010: printf("loop %i\n",	(*(i8*)ptr++)); break;	// loop CX times
-			case 0b11100001: printf("loopz %i\n",	(*(i8*)ptr++)); break;	// loop while zero
-			case 0b11100000: printf("loopnz %i\n",	(*(i8*)ptr++)); break;	// loop while not zero
-			case 0b11100011: printf("jcxz %i\n",	(*(i8*)ptr++)); break;	// jump on CX zero
+			case 0b01110100: printf("je $%+i\n",		(*(i8*)ptr++) + 2); break;	// jump on equal
+			case 0b01111100: printf("jl $%+i\n",		(*(i8*)ptr++) + 2); break;	// jump on less
+			case 0b01111110: printf("jle $%+i\n",		(*(i8*)ptr++) + 2); break;	// jump on less or equal
+			case 0b01110010: printf("jb $%+i\n",		(*(i8*)ptr++) + 2); break;	// jump on below
+			case 0b01110110: printf("jbe $%+i\n",		(*(i8*)ptr++) + 2); break;	// jump on below or equal
+			case 0b01111010: printf("jp $%+i\n",		(*(i8*)ptr++) + 2); break;	// jump on parity
+			case 0b01110000: printf("jo $%+i\n",		(*(i8*)ptr++) + 2); break;	// jump on overflow
+			case 0b01111000: printf("js $%+i\n",		(*(i8*)ptr++) + 2); break;	// jump on sign
+			case 0b01110101: printf("jne $%+i\n",		(*(i8*)ptr++) + 2); break;	// jump on not equal
+			case 0b01111101: printf("jnl $%+i\n",		(*(i8*)ptr++) + 2); break;	// jump on not less
+			case 0b01111111: printf("jnle $%+i\n",	(*(i8*)ptr++) + 2); break;	// jump on not less or equal
+			case 0b01110011: printf("jnb $%+i\n",		(*(i8*)ptr++) + 2); break;	// jump on not below
+			case 0b01110111: printf("jnbe $%+i\n",	(*(i8*)ptr++) + 2); break;	// jump on not below or equal
+			case 0b01111011: printf("jnp $%+i\n",		(*(i8*)ptr++) + 2); break;	// jump on not parity
+			case 0b01110001: printf("jno $%+i\n",		(*(i8*)ptr++) + 2); break;	// jump on not overflow
+			case 0b01111001: printf("jns $%+i\n",		(*(i8*)ptr++) + 2); break;	// jump on not sign
+			case 0b11100010: printf("loop $%+i\n",	(*(i8*)ptr++) + 2); break;	// loop CX times
+			case 0b11100001: printf("loopz $%+i\n",	(*(i8*)ptr++) + 2); break;	// loop while zero
+			case 0b11100000: printf("loopnz $%+i\n",	(*(i8*)ptr++) + 2); break;	// loop while not zero
+			case 0b11100011: printf("jcxz $%+i\n",	(*(i8*)ptr++) + 2); break;	// jump on CX zero
 			default:
 				printf("\nUnknown opcode.\n\n");
 				return -1;
