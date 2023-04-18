@@ -3,8 +3,13 @@
 #include "instruction.h"
 #include "sim86_instruction_table.h"
 
-i32 parse_data_value(u8** ptr, bool exists, bool wide, bool sign_extended) {
-	i32 result = 0;
+struct decode_context {
+	u32 flags;
+	u32 default_segment;
+};
+
+u32 parse_data_value(u8** ptr, bool exists, bool wide, bool sign_extended) {
+	u32 result = 0;
 
 	if (exists) {
 		if (wide) {
@@ -25,7 +30,7 @@ i32 parse_data_value(u8** ptr, bool exists, bool wide, bool sign_extended) {
 	return result;
 }
 
-instruction try_decode(instruction_encoding* encoding, u8* ptr) {
+instruction try_decode(decode_context* context, instruction_encoding* encoding, u8* ptr) {
 	//TODO: proper addressing
 	u32 starting_address = (u32)(uintptr_t)ptr;
 	instruction result = {};
@@ -90,7 +95,8 @@ instruction try_decode(instruction_encoding* encoding, u8* ptr) {
 			.address = starting_address,
 			.size = (u32)(uintptr_t)ptr - starting_address,
 			.op = encoding->op,
-			.flags = 0
+			.flags = context->flags,
+			.segment_override = context->default_segment
 		};
 		
 		if (W) {
@@ -99,8 +105,9 @@ instruction try_decode(instruction_encoding* encoding, u8* ptr) {
 		if (bits[Bits_Far]) {
 			result.flags |= Inst_Far;
 		}
-
-		i16 displacement = (i16)bits[Bits_Disp];
+		
+		u32 temp_disp = bits[Bits_Disp];
+		i16 displacement = (i16)temp_disp;
 
 		instruction_operand* reg_operand = &result.operands[D ? 0 : 1];
 		instruction_operand* mod_operand = &result.operands[D ? 1 : 0];
@@ -153,10 +160,10 @@ instruction try_decode(instruction_encoding* encoding, u8* ptr) {
 				last_operand->type = operand_type::IMMEDIATE;
 				last_operand->Immediate = { (i32)bits[Bits_Data] };
 			}
-			else if (has[Bits_V]) {
-				if (bits[Bits_V]) {
+			else if (has[Bits_V]) {		// V = 0		Shift/rotate count is one
+				if (bits[Bits_V]) {		// V = 1		Shift/rotate count is specified in CL register.
 					last_operand->type = operand_type::REGISTER;
-					last_operand->Register = { register_index::CX, true };
+					last_operand->Register = { register_index::CX, false };
 				}
 				else {
 					last_operand->type = operand_type::IMMEDIATE;
@@ -171,15 +178,17 @@ instruction try_decode(instruction_encoding* encoding, u8* ptr) {
 
 instruction decode_instruction(u8* ptr) {
 	//TODO: fix this to calculate proper absolute address.
+	decode_context context = {};
+	instruction result = {};
+
 	u32 start_address = (uintptr_t)ptr;
-	instruction result;
 
 	u32 bytes_read = 0;
 	while (bytes_read < 15) {	// intel specified maximum possible length of instruction
 		result = {};
 		for (u32 i = 0; i < (sizeof(instruction_table) / sizeof(instruction_table[0])); i++) {
 			instruction_encoding inst = instruction_table[i];
-			result = try_decode(&inst, ptr);
+			result = try_decode(&context, &inst, ptr);
 
 			if (result.op) {
 				ptr += result.size;
@@ -188,9 +197,19 @@ instruction decode_instruction(u8* ptr) {
 			}
 		}
 
-		//TODO: handle lock, rep, segment
-
-		break;
+		if (result.op == Op_lock) {
+			context.flags |= Inst_Lock;
+		}
+		else if (result.op == Op_rep) {
+			context.flags |= Inst_Rep;
+		}
+		else if (result.op == Op_segment) {
+			context.flags |= Inst_Segment;
+			context.default_segment = result.operands[1].Register.index;
+		}
+		else {
+			break;
+		}
 	}
 
 	if (bytes_read <= 15) {

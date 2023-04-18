@@ -21,7 +21,7 @@ void print_effective_address(FILE* stream, EffectiveAddress address) {
 	}
 	if (address.displacement != 0) {
 		if (address.register1 == register_index::NONE) {
-			fprintf(stream, "%d", address.displacement);
+			fprintf(stream, "%d", (u16)address.displacement);
 		}
 		else {
 			fprintf(stream, "%+d", address.displacement);
@@ -76,7 +76,7 @@ void print_instruction(FILE* stream, instruction instr) {
 			else {
 				// If one of the operands is a register, word/byte can be inferred
 				// If only the memory address is present, no data is being moved, so word/byte is unecessary.
-				if (instr.operands[0].type != operand_type::REGISTER && instr.operands[1].type != operand_type::REGISTER) {
+				if (instr.operands[0].type != operand_type::REGISTER) {
 					fprintf(stream, "%s ", W ? "word" : "byte");
 				}
 

@@ -37,7 +37,7 @@ struct Register {
 struct EffectiveAddress {
 	register_index register1;
 	register_index register2;
-	i16 displacement;
+	i32 displacement;
 	u32 segment;
 	bool explicit_segment;
 };
