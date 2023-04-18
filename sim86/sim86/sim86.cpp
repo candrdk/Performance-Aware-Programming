@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
 	}
 
 #ifdef _DEBUG
-	u32 bytes_read = load_memory_from_file(LISTING_41, memory, 1024 * 1024);
+	u32 bytes_read = load_memory_from_file(LISTING_42, memory, 1024 * 1024);
 #else
 	if (argc != 2) {
 		fprintf(stderr, "USAGE: %s [8086 machine code file]\n", argv[0]);

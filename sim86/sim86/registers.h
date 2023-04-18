@@ -1,9 +1,24 @@
 #pragma once
 
-enum register_index : u8 {
-	AX, CX, DX, BX,
-	SP, BP, SI, DI,
-	NONE, COUNT
+
+enum register_index {
+	AX = 0, AH = 0, AL = 1,
+	CX = 1, CH = 2, CL = 3,
+	DX = 2, DH = 4, DL = 5,
+	BX = 3, BH = 6, BL = 7,
+	SP = 4,
+	BP = 5,
+	SI = 6,
+	DI = 7,
+
+	ES = 8,
+	CS = 9,
+	SS = 10,
+	DS = 11,
+
+	IP = 12,
+	FLAGS = 13,
+	NONE
 };
 
 constexpr const register_index rm_table[8][2] = {
@@ -41,10 +56,18 @@ struct {
 			u16 BP;
 			u16 SI;
 			u16 DI;
+
+			u16 ES;
+			u16 CS;
+			u16 SS;
+			u16 DS;
+
+			u16 IP;
+			u16 FLAGS;
 		};
 
-		u8 bytes[16];
-		u8 words[8];
+		u8 bytes[28];
+		u16 words[14];
 	};
 
 	u8 get_byte(u8 reg) { return bytes[(reg << 1) | (reg >> 2)]; }
@@ -52,16 +75,18 @@ struct {
 
 	static constexpr const char register_names[][3] = {
 		"al", "cl",
-		"dl", "bh",
+		"dl", "bl",
 		"ah", "ch",
 		"dh", "bh",
 		"ax", "cx",
 		"dx", "bx",
 		"sp", "bp",
-		"si", "di"
+		"si", "di",
+		"es", "cs",
+		"ss", "ds"
 	};
 
 	constexpr const char* get_name(u8 reg, bool word = true) {
-		return register_names[reg | (word << 3)];
+		return register_names[word ? reg + 8 : reg];
 	}
 } registers;

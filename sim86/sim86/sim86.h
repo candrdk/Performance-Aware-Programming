@@ -8,6 +8,7 @@
 #define LISTING_39 "..\\computer_enhance\\perfaware\\part1\\listing_0039_more_movs"
 #define LISTING_40 "..\\computer_enhance\\perfaware\\part1\\listing_0040_challenge_movs"
 #define LISTING_41 "..\\computer_enhance\\perfaware\\part1\\listing_0041_add_sub_cmp_jnz"
+#define LISTING_42 "..\\computer_enhance\\perfaware\\part1\\listing_0042_completionist_decode"
 
 typedef uint8_t u8;
 typedef uint16_t u16;

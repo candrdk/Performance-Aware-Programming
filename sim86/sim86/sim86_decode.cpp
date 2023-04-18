@@ -3,8 +3,8 @@
 #include "instruction.h"
 #include "sim86_instruction_table.h"
 
-u32 parse_data_value(u8** ptr, bool exists, bool wide, bool sign_extended) {
-	u32 result = 0;
+i32 parse_data_value(u8** ptr, bool exists, bool wide, bool sign_extended) {
+	i32 result = 0;
 
 	if (exists) {
 		if (wide) {
@@ -16,7 +16,7 @@ u32 parse_data_value(u8** ptr, bool exists, bool wide, bool sign_extended) {
 		else {
 			result = **ptr;
 			if (sign_extended) {
-				result = (i32) * (i8*)&result;
+				result = (i32)*(i8*)&result;
 			}
 			*ptr += 1;
 		}
@@ -27,7 +27,8 @@ u32 parse_data_value(u8** ptr, bool exists, bool wide, bool sign_extended) {
 
 instruction try_decode(instruction_encoding* encoding, u8* ptr) {
 	//TODO: proper addressing
-	instruction result = { .address = (u32)(uintptr_t)ptr };
+	u32 starting_address = (u32)(uintptr_t)ptr;
+	instruction result = {};
 	bool valid = true;
 
 	bool has[Bits_Count] = {};
@@ -82,21 +83,32 @@ instruction try_decode(instruction_encoding* encoding, u8* ptr) {
 		bool wide_displacement = bits[Bits_DispAlwaysW] || (MOD == 0b10) || has_direct_address;
 		bool wide_data = bits[Bits_WMakesDataW] && !S && W;
 
-
 		bits[Bits_Disp] |= parse_data_value(&ptr, has[Bits_Disp], wide_displacement, !wide_displacement);
 		bits[Bits_Data] |= parse_data_value(&ptr, has[Bits_Data], wide_data, S);
 
-		result.size = (uintptr_t)ptr - result.address;
-		result.op = encoding->op;
-		//TODO: set flags etc
+		result = {
+			.address = starting_address,
+			.size = (u32)(uintptr_t)ptr - starting_address,
+			.op = encoding->op,
+			.flags = 0
+		};
+		
+		if (W) {
+			result.flags |= Inst_Wide;
+		}
+		if (bits[Bits_Far]) {
+			result.flags |= Inst_Far;
+		}
 
-		u32 disp = bits[Bits_Disp];
-		i16 displacement = (i16)disp;
+		i16 displacement = (i16)bits[Bits_Disp];
 
 		instruction_operand* reg_operand = &result.operands[D ? 0 : 1];
 		instruction_operand* mod_operand = &result.operands[D ? 1 : 0];
 
-		//TODO has[Bits_SR]
+		if (has[Bits_SR]) {
+			reg_operand->type = operand_type::REGISTER;
+			reg_operand->Register = { (register_index)((u8)register_index::ES + (bits[Bits_SR] & 0b11)), true };
+		}
 
 		if (has[Bits_REG]) {
 			reg_operand->type = operand_type::REGISTER;
@@ -120,11 +132,18 @@ instruction try_decode(instruction_encoding* encoding, u8* ptr) {
 		}
 
 		if (has[Bits_Data] && has[Bits_Disp] && !has[Bits_MOD]) {
-			//TODO: inter segment address operand?
+			result.operands[0].type = operand_type::MEMORY;
+			result.operands[0].Address = {
+				.displacement = displacement,
+				.segment = bits[Bits_Data],
+				.explicit_segment = true
+			};
 		}
 		else {
 			instruction_operand* last_operand = &result.operands[1];
-			if (result.operands[0].type != operand_type::NONE) last_operand = &result.operands[1];
+			if (last_operand->type != operand_type::NONE) {
+				last_operand = &result.operands[0];
+			}
 
 			if (bits[Bits_RelJMPDisp]) {
 				last_operand->type = operand_type::IMMEDIATE;
@@ -170,6 +189,7 @@ instruction decode_instruction(u8* ptr) {
 		}
 
 		//TODO: handle lock, rep, segment
+
 		break;
 	}
 

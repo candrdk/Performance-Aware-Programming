@@ -31,9 +31,24 @@ void print_effective_address(FILE* stream, EffectiveAddress address) {
 }
 
 void print_instruction(FILE* stream, instruction instr) {
-	bool W = instr.flags & 1; //TODO: check instr_wide flag
+	bool W = instr.flags & Inst_Wide;
 
-	fprintf(stream, "%s ", mnemonics_table[instr.op]);
+	if (instr.flags & Inst_Lock) {
+		if (instr.op == operation_type::Op_xchg) {
+			instruction_operand temp = instr.operands[0];
+			instr.operands[0] = instr.operands[1];
+			instr.operands[1] = temp;
+		}
+		fprintf(stream, "lock ");
+	}
+
+	const char* mnemonic_suffix = "";
+	if (instr.flags & Inst_Rep) {
+		fprintf(stream, "rep ");
+		mnemonic_suffix = W ? "w" : "b";
+	}
+
+	fprintf(stream, "%s%s ", mnemonics_table[instr.op], mnemonic_suffix);
 
 	char const* sep = "";
 	for (int i = 0; i < 2; i++) {
@@ -52,15 +67,25 @@ void print_instruction(FILE* stream, instruction instr) {
 		} break;
 
 		case operand_type::MEMORY: {
-			//TODO: handle instr.flags & Instr_Far
-			//TODO: handle address.flags & Address_ExplicitSegment
-
-			if (instr.operands[0].type != operand_type::REGISTER) {
-				fprintf(stream, "%s ", W ? "word" : "byte");
+			if (instr.flags & Inst_Far) {
+				fprintf(stream, "far ");
 			}
+			if (operand.Address.explicit_segment) {
+				fprintf(stream, "%u:%u", operand.Address.segment, operand.Address.displacement);
+			}
+			else {
+				// If one of the operands is a register, word/byte can be inferred
+				// If only the memory address is present, no data is being moved, so word/byte is unecessary.
+				if (instr.operands[0].type != operand_type::REGISTER && instr.operands[1].type != operand_type::REGISTER) {
+					fprintf(stream, "%s ", W ? "word" : "byte");
+				}
 
-			//TODO: handle instr.flags & Inst_Segment
-			print_effective_address(stream, operand.Address);
+				if (instr.flags & Inst_Segment) {
+					fprintf(stream, "%s:", registers.get_name(instr.segment_override));
+				}
+				
+				print_effective_address(stream, operand.Address);
+			}
 		} break;
 
 		case operand_type::IMMEDIATE: {
