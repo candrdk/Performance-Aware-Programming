@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdio.h>
+#include "sim86.h"
 #include "registers.h"
 
 enum operation_type : u32 {
@@ -67,3 +68,9 @@ struct instruction {
 
 	u32 segment_override;
 };
+
+#define INST(Mnemonic, ...) void exec_##Mnemonic(instruction instr);
+#define INSTALT(...)
+#include "sim86_instruction_table.inl"
+
+void execute_instruction(instruction instr);

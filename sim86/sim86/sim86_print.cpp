@@ -1,7 +1,6 @@
 #include <stdio.h>
 
 #include "sim86.h"
-#include "registers.h"
 #include "instruction.h"
 
 constexpr const char* mnemonics_table[] = {
@@ -98,6 +97,4 @@ void print_instruction(FILE* stream, instruction instr) {
 		} break;
 		}
 	}
-
-	fprintf(stream, "\n");
 }

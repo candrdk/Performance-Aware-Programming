@@ -3,7 +3,6 @@
 #include <string.h>
 
 #include "sim86.h"
-#include "registers.h"
 #include "instruction.h"
 #include "sim86_print.h"
 #include "sim86_decode.h"
@@ -22,6 +21,8 @@ void disassemble(u32 byte_count, u8* ptr) {
 			}
 
 			print_instruction(stdout, instr);
+			execute_instruction(instr);
+			fprintf(stdout, "\n");
 		}
 		else {
 			fprintf(stderr, "ERROR: Unrecognized binary in instruction stream.\n");
@@ -53,7 +54,7 @@ int main(int argc, char* argv[]) {
 	}
 
 #ifdef _DEBUG
-	u32 bytes_read = load_memory_from_file(LISTING_42, memory, 1024 * 1024);
+	u32 bytes_read = load_memory_from_file(LISTING_45, memory, 1024 * 1024);
 #else
 	if (argc != 2) {
 		fprintf(stderr, "USAGE: %s [8086 machine code file]\n", argv[0]);

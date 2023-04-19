@@ -1,15 +1,14 @@
 #pragma once
 
-
 enum register_index {
-	AX = 0, AH = 0, AL = 1,
-	CX = 1, CH = 2, CL = 3,
-	DX = 2, DH = 4, DL = 5,
-	BX = 3, BH = 6, BL = 7,
-	SP = 4,
-	BP = 5,
-	SI = 6,
-	DI = 7,
+	AX = 0, AL = 0,
+	CX = 1, CL = 1,
+	DX = 2, DL = 2,
+	BX = 3, BL = 3,
+	SP = 4, AH = 4,
+	BP = 5, CH = 5,
+	SI = 6, DH = 6,
+	DI = 7, BH = 7,
 
 	ES = 8,
 	CS = 9,
@@ -70,8 +69,10 @@ struct {
 		u16 words[14];
 	};
 
-	u8 get_byte(u8 reg) { return bytes[(reg << 1) | (reg >> 2)]; }
-	u16 get_word(u8 reg) { return words[reg]; }
+	u8& get_byte(u8 reg) { return bytes[((reg << 1) | (reg >> 2)) & 0b111]; }
+	const u8& get_byte(u8 reg) const { return bytes[((reg << 1) | (reg >> 2)) & 0b111]; }
+	u16& get_word(u8 reg) { return words[reg]; }
+	const u16& get_word(u8 reg) const { return words[reg]; }
 
 	static constexpr const char register_names[][3] = {
 		"al", "cl",

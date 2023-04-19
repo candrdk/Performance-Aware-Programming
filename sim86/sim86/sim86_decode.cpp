@@ -1,6 +1,4 @@
 #include "sim86.h"
-#include "registers.h"
-#include "instruction.h"
 #include "sim86_instruction_table.h"
 
 struct decode_context {

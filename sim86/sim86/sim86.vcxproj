@@ -143,6 +143,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="instruction.cpp" />
     <ClCompile Include="sim86.cpp" />
     <ClCompile Include="sim86_decode.cpp" />
     <ClCompile Include="sim86_print.cpp" />
