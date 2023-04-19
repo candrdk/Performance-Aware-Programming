@@ -3,7 +3,7 @@
 
 struct decode_context {
 	u32 flags;
-	u32 default_segment;
+	reg16_t default_segment;
 };
 
 u32 parse_data_value(u8** ptr, bool exists, bool wide, bool sign_extended) {
@@ -112,23 +112,23 @@ instruction try_decode(decode_context* context, instruction_encoding* encoding, 
 
 		if (has[Bits_SR]) {
 			reg_operand->type = operand_type::REGISTER;
-			reg_operand->Register = { (register_index)((u8)register_index::ES + (bits[Bits_SR] & 0b11)), true };
+			reg_operand->Register = { true, reg16_t::ES + (bits[Bits_SR] & 0b11)};
 		}
 
 		if (has[Bits_REG]) {
 			reg_operand->type = operand_type::REGISTER;
-			reg_operand->Register = { (register_index)bits[Bits_REG], W };
+			reg_operand->Register = { W, bits[Bits_REG]};
 		}
 
 		if (has[Bits_MOD]) {
 			if (MOD == 0b11) {
 				mod_operand->type = operand_type::REGISTER;
-				mod_operand->Register = { (register_index)bits[Bits_RM], W || bits[Bits_RMRegAlwaysW] };
+				mod_operand->Register = { W || bits[Bits_RMRegAlwaysW], bits[Bits_RM] };
 			}
 			else {
 				mod_operand->type = operand_type::MEMORY;
 				if ((MOD == 0b00) && (RM == 0b110)) {
-					mod_operand->Address = { register_index::NONE, register_index::NONE, displacement };
+					mod_operand->Address = { reg16_t::NONE, reg16_t::NONE, displacement };
 				}
 				else {
 					mod_operand->Address = { rm_table[RM][0], rm_table[RM][1], displacement };
@@ -140,7 +140,7 @@ instruction try_decode(decode_context* context, instruction_encoding* encoding, 
 			result.operands[0].type = operand_type::MEMORY;
 			result.operands[0].Address = {
 				.displacement = displacement,
-				.segment = bits[Bits_Data],
+				.segment = reg16_t(bits[Bits_Data]),
 				.explicit_segment = true
 			};
 		}
@@ -161,7 +161,7 @@ instruction try_decode(decode_context* context, instruction_encoding* encoding, 
 			else if (has[Bits_V]) {		// V = 0		Shift/rotate count is one
 				if (bits[Bits_V]) {		// V = 1		Shift/rotate count is specified in CL register.
 					last_operand->type = operand_type::REGISTER;
-					last_operand->Register = { register_index::CX, false };
+					last_operand->Register = { false, reg16_t::CX };
 				}
 				else {
 					last_operand->type = operand_type::IMMEDIATE;
@@ -203,7 +203,7 @@ instruction decode_instruction(u8* ptr) {
 		}
 		else if (result.op == Op_segment) {
 			context.flags |= Inst_Segment;
-			context.default_segment = result.operands[1].Register.index;
+			context.default_segment = reg16_t(result.operands[1].Register.reg16);
 		}
 		else {
 			break;

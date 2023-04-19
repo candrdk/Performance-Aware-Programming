@@ -1,93 +1,51 @@
 #pragma once
+#include "sim86.h"
 
-enum register_index {
-	AX = 0, AL = 0,
-	CX = 1, CL = 1,
-	DX = 2, DL = 2,
-	BX = 3, BL = 3,
-	SP = 4, AH = 4,
-	BP = 5, CH = 5,
-	SI = 6, DH = 6,
-	DI = 7, BH = 7,
+enum reg16_t : u32 { AX, CX, DX, BX, SP, BP, SI, DI, ES, CS, SS, DS, IP, FLAGS, REG_COUNT, NONE };
+enum reg8_t : u32 { AL, CL, DL, BL, AH, CH, DH, BH };
 
-	ES = 8,
-	CS = 9,
-	SS = 10,
-	DS = 11,
-
-	IP = 12,
-	FLAGS = 13,
-	NONE
+constexpr const reg16_t rm_table[8][2] = {
+	{ BX, SI },		// bx + si
+	{ BX, DI },		// bx + di
+	{ BP, SI },		// bp + si
+	{ BP, DI },		// bp + di
+	{ SI, NONE },	// si
+	{ DI, NONE },	// di
+	{ BP, NONE },	// bp / direct address
+	{ BX, NONE }	// bx
 };
 
-constexpr const register_index rm_table[8][2] = {
-	{ register_index::BX, register_index::SI },		// bx + si
-	{ register_index::BX, register_index::DI },		// bx + di
-	{ register_index::BP, register_index::SI },		// bp + si
-	{ register_index::BP, register_index::DI },		// bp + di
-	{ register_index::SI, register_index::NONE },	// si
-	{ register_index::DI, register_index::NONE },	// di
-	{ register_index::BP, register_index::NONE },	// bp / direct address
-	{ register_index::BX, register_index::NONE }	// bx
+union gp_reg_t {
+	u16 reg16;
+	struct {
+		u8 reg8_l;
+		u8 reg8_h;
+	};
 };
 
 struct {
-	union {
-		struct {
-			union {
-				u16 AX;
-				struct { u8 AH; u8 AL; };
-			};
-			union {
-				u16 CX;
-				struct { u8 CH; u8 CL; };
-			};
-			union {
-				u16 DX;
-				struct { u8 DH; u8 DL; };
-			};
-			union {
-				u16 BX;
-				struct { u8 BH; u8 BL; };
-			};
-
-			u16 SP;
-			u16 BP;
-			u16 SI;
-			u16 DI;
-
-			u16 ES;
-			u16 CS;
-			u16 SS;
-			u16 DS;
-
-			u16 IP;
-			u16 FLAGS;
-		};
-
-		u8 bytes[28];
-		u16 words[14];
+private:
+	static constexpr const char* reg16_names[] = {
+		"ax", "cx", "dx", "bx", 
+		"sp", "bp", "si", "di", 
+		"es", "cs", "ss", "ds"
+	};
+	static constexpr const char* reg8_names[] = {
+		"al", "cl", "dl", "bl", "ah", "ch", "dh", "bh"
 	};
 
-	u8& get_byte(u8 reg) { return bytes[((reg << 1) | (reg >> 2)) & 0b111]; }
-	const u8& get_byte(u8 reg) const { return bytes[((reg << 1) | (reg >> 2)) & 0b111]; }
-	u16& get_word(u8 reg) { return words[reg]; }
-	const u16& get_word(u8 reg) const { return words[reg]; }
+	gp_reg_t regs[REG_COUNT];
+public:
+	u8& operator[](reg8_t reg) { assert(reg < 8); return reg < 4 ? regs[reg].reg8_l : regs[reg - 4].reg8_h; };
+	const u8& operator[](reg8_t reg) const { assert(reg < 8); return reg < 4 ? regs[reg].reg8_l : regs[reg - 4].reg8_h; };
+	
+	u16& operator[](reg16_t reg) { assert(reg < REG_COUNT); return regs[reg].reg16; };
+	const u16& operator[](reg16_t reg) const { assert(reg < REG_COUNT); return regs[reg].reg16; };
 
-	static constexpr const char register_names[][3] = {
-		"al", "cl",
-		"dl", "bl",
-		"ah", "ch",
-		"dh", "bh",
-		"ax", "cx",
-		"dx", "bx",
-		"sp", "bp",
-		"si", "di",
-		"es", "cs",
-		"ss", "ds"
-	};
-
-	constexpr const char* get_name(u8 reg, bool word = true) {
-		return register_names[word ? reg + 8 : reg];
+	constexpr const char* name(reg8_t reg) const { assert(reg < 8); return reg8_names[reg]; }
+	constexpr const char* name(reg16_t reg) const { assert(reg < REG_COUNT); return reg16_names[reg]; }
+	constexpr const char* name(u32 reg, bool wide) const {
+		assert(wide ? reg < REG_COUNT : reg < 8);
+		return wide ? reg16_names[reg] : reg8_names[reg & 0b111]; 
 	}
 } registers;

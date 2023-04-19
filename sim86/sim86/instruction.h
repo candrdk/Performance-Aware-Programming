@@ -31,15 +31,19 @@ enum class operand_type : u16 {
 };
 
 struct Register {
-	register_index index;
 	bool wide;
+	union {
+		u32 reg;
+		reg16_t reg16;
+		reg8_t reg8;
+	};
 };
 
 struct EffectiveAddress {
-	register_index register1;
-	register_index register2;
+	reg16_t register1;
+	reg16_t register2;
 	i32 displacement;
-	u32 segment;
+	reg16_t segment;
 	bool explicit_segment;
 };
 
@@ -66,7 +70,7 @@ struct instruction {
 
 	instruction_operand operands[2];
 
-	u32 segment_override;
+	reg16_t segment_override;
 };
 
 #define INST(Mnemonic, ...) void exec_##Mnemonic(instruction instr);
@@ -74,3 +78,6 @@ struct instruction {
 #include "sim86_instruction_table.inl"
 
 void execute_instruction(instruction instr);
+
+//NOTE: remove this once headers are organized
+void dump_registers(FILE* stream);

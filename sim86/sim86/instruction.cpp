@@ -11,38 +11,60 @@ void execute_instruction(instruction instr) {
 	exec_op_table[instr.op](instr);
 }
 
+/* 
+TODO: this is a temporary fix untill i figure all my header stuff out
+*/
+void dump_registers(FILE* stream) {
+	fprintf(stream, "Final registers:\n");
+	fprintf(stream, "%s: 0x%4x (%d)\n", registers.name(AX, true), registers[AX], registers[AX]);
+	fprintf(stream, "%s: 0x%4x (%d)\n", registers.name(BX, true), registers[BX], registers[BX]);
+	fprintf(stream, "%s: 0x%4x (%d)\n", registers.name(CX, true), registers[CX], registers[CX]);
+	fprintf(stream, "%s: 0x%4x (%d)\n", registers.name(DX, true), registers[DX], registers[DX]);
+	fprintf(stream, "%s: 0x%4x (%d)\n", registers.name(SP, true), registers[SP], registers[SP]);
+	fprintf(stream, "%s: 0x%4x (%d)\n", registers.name(BP, true), registers[BP], registers[BP]);
+	fprintf(stream, "%s: 0x%4x (%d)\n", registers.name(SI, true), registers[SI], registers[SI]);
+	fprintf(stream, "%s: 0x%4x (%d)\n", registers.name(DI, true), registers[DI], registers[DI]);
+	fprintf(stream, "%s: 0x%4x (%d)\n", registers.name(ES, true), registers[ES], registers[ES]);
+	fprintf(stream, "%s: 0x%4x (%d)\n", registers.name(SS, true), registers[SS], registers[SS]);
+	fprintf(stream, "%s: 0x%4x (%d)\n", registers.name(DS, true), registers[DS], registers[DS]);
+}
+
 void exec_mov(instruction instr) {
-	instruction_operand to = instr.operands[0];
-	instruction_operand from = instr.operands[1];
+	instruction_operand dst_op = instr.operands[0];
+	instruction_operand src_op = instr.operands[1];
 
-	if (to.type == operand_type::REGISTER) {
-		register_index wide_index = to.Register.index;
-		if (wide_index < 8 && to.Register.wide == false) wide_index = (register_index)(wide_index & 0b11);
-		printf(" ; %s:0x%x->", registers.get_name(wide_index), registers.get_word(wide_index));
+	if (dst_op.type == operand_type::REGISTER) {
+		Register dst = dst_op.Register;
 
-		if (from.type == operand_type::REGISTER) {
-			if (to.Register.wide) {
-				registers.get_word(to.Register.index) = registers.get_word(from.Register.index);
+		reg16_t reg16 = dst.reg16;
+		if (reg16 < 8 && !dst.wide) reg16 = reg16_t(reg16 & 0b11);
+		printf(" ; %s:0x%x->", registers.name(reg16), registers[reg16]);
+
+		if (src_op.type == operand_type::REGISTER) {
+			Register src = src_op.Register;
+			if (dst.wide) {
+				registers[dst.reg16] = registers[src.reg16];
 			}
 			else {
-				registers.get_byte(to.Register.index) = registers.get_byte(from.Register.index);
-			}
-		} 
-		else if (from.type == operand_type::IMMEDIATE) {
-			if (to.Register.wide) {
-				registers.get_word(to.Register.index) = from.Immediate.value;
-			} 
-			else {
-				registers.get_byte(to.Register.index) = from.Immediate.value;
+				registers[dst.reg8] = registers[src.reg8];
 			}
 		}
-		else if (from.type == operand_type::MEMORY) {
+		else if (src_op.type == operand_type::IMMEDIATE) {
+			Immediate src = src_op.Immediate;
+			if (dst.wide) {
+				registers[dst.reg16] = src.value;
+			}
+			else {
+				registers[dst.reg8] = src.value;
+			}
+		}
+		else if (src_op.type == operand_type::MEMORY) {
 			assert(false); // TODO: not implemented
 		}
 
-		printf("0x%x", registers.get_word(wide_index));
-	} 
-	else if (to.type == operand_type::MEMORY) {
+		printf("0x%x", registers[reg16]);
+	}
+	else if (dst_op.type == operand_type::MEMORY) {
 		assert(false); // TODO: not implemented
 	}
 };

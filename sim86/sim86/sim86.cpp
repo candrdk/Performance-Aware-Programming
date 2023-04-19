@@ -68,4 +68,6 @@ int main(int argc, char* argv[]) {
 	printf("; %s disassembly:\n", argv[1]);
 	printf("bits 16\n");
 	disassemble(bytes_read, memory);
+	printf("\n");
+	dump_registers(stdout);
 }
