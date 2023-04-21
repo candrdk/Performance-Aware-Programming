@@ -9,9 +9,11 @@
 #define LISTING_40 "..\\computer_enhance\\perfaware\\part1\\listing_0040_challenge_movs"
 #define LISTING_41 "..\\computer_enhance\\perfaware\\part1\\listing_0041_add_sub_cmp_jnz"
 #define LISTING_42 "..\\computer_enhance\\perfaware\\part1\\listing_0042_completionist_decode"
-#define LISTING_43 "..\\computer_enhance\\perfaware\\part1\\LISTING_0043_immediate_movs"
-#define LISTING_44 "..\\computer_enhance\\perfaware\\part1\\LISTING_0044_register_movs"
-#define LISTING_45 "..\\computer_enhance\\perfaware\\part1\\LISTING_0045_challenge_register_movs"
+#define LISTING_43 "..\\computer_enhance\\perfaware\\part1\\listing_0043_immediate_movs"
+#define LISTING_44 "..\\computer_enhance\\perfaware\\part1\\listing_0044_register_movs"
+#define LISTING_45 "..\\computer_enhance\\perfaware\\part1\\listing_0045_challenge_register_movs"
+#define LISTING_46 "..\\computer_enhance\\perfaware\\part1\\listing_0046_add_sub_cmp"
+#define LISTING_47 "..\\computer_enhance\\perfaware\\part1\\listing_0047_challenge_flags"
 
 typedef uint8_t u8;
 typedef uint16_t u16;

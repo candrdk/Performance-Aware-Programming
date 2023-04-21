@@ -12,60 +12,85 @@ void execute_instruction(instruction instr) {
 }
 
 /* 
-TODO: this is a temporary fix untill i figure all my header stuff out
+TODO: this is a temporary fix until i figure all my header stuff out
 */
 void dump_registers(FILE* stream) {
 	fprintf(stream, "Final registers:\n");
-	fprintf(stream, "%s: 0x%4x (%d)\n", registers.name(AX, true), registers[AX], registers[AX]);
-	fprintf(stream, "%s: 0x%4x (%d)\n", registers.name(BX, true), registers[BX], registers[BX]);
-	fprintf(stream, "%s: 0x%4x (%d)\n", registers.name(CX, true), registers[CX], registers[CX]);
-	fprintf(stream, "%s: 0x%4x (%d)\n", registers.name(DX, true), registers[DX], registers[DX]);
-	fprintf(stream, "%s: 0x%4x (%d)\n", registers.name(SP, true), registers[SP], registers[SP]);
-	fprintf(stream, "%s: 0x%4x (%d)\n", registers.name(BP, true), registers[BP], registers[BP]);
-	fprintf(stream, "%s: 0x%4x (%d)\n", registers.name(SI, true), registers[SI], registers[SI]);
-	fprintf(stream, "%s: 0x%4x (%d)\n", registers.name(DI, true), registers[DI], registers[DI]);
-	fprintf(stream, "%s: 0x%4x (%d)\n", registers.name(ES, true), registers[ES], registers[ES]);
-	fprintf(stream, "%s: 0x%4x (%d)\n", registers.name(SS, true), registers[SS], registers[SS]);
-	fprintf(stream, "%s: 0x%4x (%d)\n", registers.name(DS, true), registers[DS], registers[DS]);
+	const reg16_t alphabetic_regs[12] = { AX, BX, CX, DX, SP, BP, SI, DI, CS, DS, SS, ES };
+	
+	for (reg16_t* r = (reg16_t*)&alphabetic_regs; r < (reg16_t*)&alphabetic_regs + 12; r++) {
+		if(registers[*r])
+			fprintf(stream, "%s: 0x%04x (%5d)\n", registers.name(*r), registers[*r], registers[*r]);
+	}
+
+	char flag_str[16];
+	registers.flags_dbg_str(flag_str);
+	fprintf(stream, "flags: %s\n", flag_str);
+}
+
+u16 load_op_value(instruction_operand op) {
+	switch (op.type) {
+		case operand_type::REGISTER:
+			return op.Register.wide ? registers[reg16_t(op.Register.reg)] : registers[reg8_t(op.Register.reg)];
+		case operand_type::IMMEDIATE:
+			return op.Immediate.value;
+		case operand_type::MEMORY:
+			assert(false); //TODO: not implemented
+			break;
+	}
+}
+
+void store_op_value(instruction_operand op, u16 res) {
+	switch (op.type) {
+		case operand_type::REGISTER: {
+			// printing
+			reg16_t reg16 = op.Register.reg16;
+			if (reg16 < 8 && !(op.Register.wide)) reg16 = reg16_t(reg16 & 0b11);
+			printf(" ; %s:0x%x->", registers.name(reg16), registers[reg16]);
+
+			if (op.Register.wide) {
+				registers[op.Register.reg16] = res;
+			}
+			else {
+				registers[op.Register.reg8] = res;
+			}
+
+			printf("0x%x ", registers[reg16]);
+			break;
+		}
+
+		case operand_type::MEMORY: {
+			assert(false); //TODO: not implemented
+		}
+	}
 }
 
 void exec_mov(instruction instr) {
-	instruction_operand dst_op = instr.operands[0];
-	instruction_operand src_op = instr.operands[1];
+	u16 value = load_op_value(instr.operands[1]);
 
-	if (dst_op.type == operand_type::REGISTER) {
-		Register dst = dst_op.Register;
-
+	switch (instr.operands[0].type) {
+	case operand_type::REGISTER: {
+		Register dst = instr.operands[0].Register;
+	
+		// printing
 		reg16_t reg16 = dst.reg16;
 		if (reg16 < 8 && !dst.wide) reg16 = reg16_t(reg16 & 0b11);
 		printf(" ; %s:0x%x->", registers.name(reg16), registers[reg16]);
-
-		if (src_op.type == operand_type::REGISTER) {
-			Register src = src_op.Register;
-			if (dst.wide) {
-				registers[dst.reg16] = registers[src.reg16];
-			}
-			else {
-				registers[dst.reg8] = registers[src.reg8];
-			}
+	
+		if (dst.wide) {
+			registers[dst.reg16] = value;
 		}
-		else if (src_op.type == operand_type::IMMEDIATE) {
-			Immediate src = src_op.Immediate;
-			if (dst.wide) {
-				registers[dst.reg16] = src.value;
-			}
-			else {
-				registers[dst.reg8] = src.value;
-			}
+		else {
+			registers[dst.reg8] = value;
 		}
-		else if (src_op.type == operand_type::MEMORY) {
-			assert(false); // TODO: not implemented
-		}
-
+	
 		printf("0x%x", registers[reg16]);
+		break;
 	}
-	else if (dst_op.type == operand_type::MEMORY) {
-		assert(false); // TODO: not implemented
+
+	case operand_type::MEMORY: {
+		assert(false); //TODO: not implemented
+	}
 	}
 };
 
@@ -82,16 +107,134 @@ void exec_lahf(instruction instr) {};
 void exec_sahf(instruction instr) {};
 void exec_pushf(instruction instr) {};
 void exec_popf(instruction instr) {};
-void exec_add(instruction instr) {};
+
+void exec_add(instruction instr) {
+	char flag_str[16] = {};
+	registers.flags_dbg_str(flag_str);
+
+	// load operand values
+	u16 dst = load_op_value(instr.operands[0]);
+	u16 src = load_op_value(instr.operands[1]);
+	u32 res = dst + src;
+
+	// add operands and set flags
+	if (instr.flags & Inst_Wide) {
+		registers.set_flag(CF, res & (1 << 16));
+		registers.set_flag(PF, !(__popcnt16(res & 0xFF) & 1));
+		registers.set_flag(ZF, (res & 0xFFFF) == 0);
+		registers.set_flag(SF, res & (1 << 15));
+
+		registers.set_flag(AF, 15 < ((dst & 0xF) + (src & 0xF)));
+		registers.set_flag(OF, ((dst >> 15) == (src >> 15)) && ((res >> 15) != (dst >> 15)));
+	} 
+	else {
+		registers.set_flag(CF, res & (1 << 8));
+		registers.set_flag(PF, !(__popcnt16(res & 0xFF) & 1));
+		registers.set_flag(ZF, (res & 0xFF) == 0);
+		registers.set_flag(SF, res & (1<<7));
+
+		registers.set_flag(AF, 15 < ((dst & 0xF) + (src & 0xF)));
+		registers.set_flag(OF, ((dst & 0x80) == (src & 0x80)) && ((res & 0x80) != (dst & 0x80)));
+	}
+
+	// store the result
+	store_op_value(instr.operands[0], res);
+
+	// If any flags are set or have been changed
+	if(registers[FLAGS] || flag_str[0] != 0) {
+		printf("flags:%s->", flag_str);
+		registers.flags_dbg_str(flag_str);
+		printf("%s", flag_str);
+	}
+};
+
 void exec_adc(instruction instr) {};
 void exec_inc(instruction instr) {};
 void exec_aaa(instruction instr) {};
 void exec_daa(instruction instr) {};
-void exec_sub(instruction instr) {};
+
+//TODO: fix AF for both sub and cmp
+void exec_sub(instruction instr) {
+	char flag_str[16] = {};
+	registers.flags_dbg_str(flag_str);
+
+	// load operand values
+	u16 dst = load_op_value(instr.operands[0]);
+	u16 src = load_op_value(instr.operands[1]);
+	u32 res = dst - src;
+
+	// add operands and set flags
+	if (instr.flags & Inst_Wide) {
+		registers.set_flag(CF, res & (1 << 16));
+		registers.set_flag(PF, !(__popcnt16(res & 0xFF) & 1));
+		registers.set_flag(ZF, (res & 0xFFFF) == 0);
+		registers.set_flag(SF, res & (1 << 15));
+
+		registers.set_flag(AF, 0 != (((dst & 0xF) - (src & 0xF)) & ~0xF));
+		registers.set_flag(OF, ((dst >> 15) != (src >> 15)) && ((res >> 15) != (dst >> 15)));
+	} 
+	else {
+		registers.set_flag(CF, res & (1 << 8));
+		registers.set_flag(PF, !(__popcnt16(res & 0xFF) & 1));
+		registers.set_flag(ZF, (res & 0xFF) == 0);
+		registers.set_flag(SF, res & (1 << 7));
+
+		registers.set_flag(AF, 0 != (((dst & 0xF) - (src & 0xF)) & ~0xF));
+		registers.set_flag(OF, ((dst & 0x80) != (src & 0x80)) && ((res & 0x80) != (dst & 0x80)));
+	}
+
+	// store the result
+	store_op_value(instr.operands[0], res);
+
+	// If any flags are set or have been changed
+	if(registers[FLAGS] || flag_str[0] != 0) {
+		printf("flags:%s->", flag_str);
+		registers.flags_dbg_str(flag_str);
+		printf("%s", flag_str);
+	}
+};
+
 void exec_sbb(instruction instr) {};
 void exec_dec(instruction instr) {};
 void exec_neg(instruction instr) {};
-void exec_cmp(instruction instr) {};
+
+void exec_cmp(instruction instr) {
+	char flag_str[16] = {};
+	registers.flags_dbg_str(flag_str);
+
+	// load operand values
+	u16 dst = load_op_value(instr.operands[0]);
+	u16 src = load_op_value(instr.operands[1]);
+	u32 res = dst - src;
+
+	// add operands and set flags
+	if (instr.flags & Inst_Wide) {
+		registers.set_flag(CF, res & (1 << 16));
+		registers.set_flag(PF, !(__popcnt16(res & 0xFF) & 1));
+		registers.set_flag(ZF, (res & 0xFFFF) == 0);
+		registers.set_flag(SF, res & (1 << 15));
+
+		registers.set_flag(AF, 0 != (((dst & 0xF) - (src & 0xF)) & ~0xF));
+		registers.set_flag(OF, ((dst >> 15) != (src >> 15)) && ((res >> 15) != (dst >> 15)));
+	} 
+	else {
+		registers.set_flag(CF, res & (1 << 8));
+		registers.set_flag(PF, !(__popcnt16(res & 0xFF) & 1));
+		registers.set_flag(ZF, (res & 0xFF) == 0);
+		registers.set_flag(SF, res & (1 << 7));
+		
+		registers.set_flag(AF, 0 != (((dst & 0xF) - (src & 0xF)) & ~0xF));
+		registers.set_flag(OF, ((dst & 0x80) != (src & 0x80)) && ((res & 0x80) != (dst & 0x80)));
+	}
+
+	// If any flags are set or have been changed
+	if(registers[FLAGS] || flag_str[0] != 0) {
+		printf(" ; flags:%s->", flag_str);
+		registers.flags_dbg_str(flag_str);
+		printf("%s", flag_str);
+	}
+};
+
 void exec_aas(instruction instr) {};
 void exec_das(instruction instr) {};
 void exec_mul(instruction instr) {};
