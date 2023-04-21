@@ -145,9 +145,9 @@ instruction try_decode(decode_context* context, instruction_encoding* encoding, 
 			};
 		}
 		else {
-			instruction_operand* last_operand = &result.operands[1];
+			instruction_operand* last_operand = &result.operands[0];
 			if (last_operand->type != operand_type::NONE) {
-				last_operand = &result.operands[0];
+				last_operand = &result.operands[1];
 			}
 
 			if (bits[Bits_RelJMPDisp]) {
@@ -179,7 +179,7 @@ instruction decode_instruction(u8* ptr) {
 	decode_context context = {};
 	instruction result = {};
 
-	u32 start_address = (uintptr_t)ptr;
+	u32 start_address = ((uintptr_t)ptr & 0xFFFFFFFF);
 
 	u32 bytes_read = 0;
 	while (bytes_read < 15) {	// intel specified maximum possible length of instruction

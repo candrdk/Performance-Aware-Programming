@@ -14,6 +14,9 @@
 #define LISTING_45 "..\\computer_enhance\\perfaware\\part1\\listing_0045_challenge_register_movs"
 #define LISTING_46 "..\\computer_enhance\\perfaware\\part1\\listing_0046_add_sub_cmp"
 #define LISTING_47 "..\\computer_enhance\\perfaware\\part1\\listing_0047_challenge_flags"
+#define LISTING_48 "..\\computer_enhance\\perfaware\\part1\\listing_0048_ip_register"
+#define LISTING_49 "..\\computer_enhance\\perfaware\\part1\\listing_0049_conditional_jumps"
+#define LISTING_50 "..\\computer_enhance\\perfaware\\part1\\listing_0050_challenge_jumps"
 
 typedef uint8_t u8;
 typedef uint16_t u16;

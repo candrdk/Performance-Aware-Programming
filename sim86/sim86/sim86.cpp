@@ -7,18 +7,16 @@
 #include "sim86_print.h"
 #include "sim86_decode.h"
 
-void disassemble(u32 byte_count, u8* ptr) {
-	while (byte_count) {
-		instruction instr = decode_instruction(ptr);
+void disassemble(u8* memory, size_t byte_count) {
+	while (registers.IP < byte_count) {
+		instruction instr = decode_instruction(memory + registers.IP);
 		if (instr.op) {
-			if (byte_count >= instr.size) {
-				ptr += instr.size;
-				byte_count -= instr.size;
-			}
-			else {
+			if (registers.IP + instr.size > byte_count) {
 				fprintf(stderr, "ERROR: Instruction extends outside disassembly region.\n");
 				break;
 			}
+			
+			registers.IP += instr.size;
 
 			print_instruction(stdout, instr);
 			execute_instruction(instr);
@@ -31,12 +29,12 @@ void disassemble(u32 byte_count, u8* ptr) {
 	}
 }
 
-u32 load_memory_from_file(const char* path, u8* memory, u32 size) {
+size_t load_memory_from_file(const char* path, u8* memory, size_t size) {
 	FILE* file;
 	fopen_s(&file, path, "rb");
 
 	if (file) {
-		u32 read = fread(memory, 1, size, file);
+		size_t read = fread(memory, 1, size, file);
 		fclose(file);
 		return read;
 	}
@@ -54,7 +52,7 @@ int main(int argc, char* argv[]) {
 	}
 
 #ifdef _DEBUG
-	u32 bytes_read = load_memory_from_file(LISTING_47, memory, 1024 * 1024);
+	size_t bytes_read = load_memory_from_file(LISTING_50, memory, 1024 * 1024);
 #else
 	if (argc != 2) {
 		fprintf(stderr, "USAGE: %s [8086 machine code file]\n", argv[0]);
@@ -67,7 +65,7 @@ int main(int argc, char* argv[]) {
 	
 	printf("; %s disassembly:\n", argv[1]);
 	printf("bits 16\n");
-	disassemble(bytes_read, memory);
+	disassemble(memory, bytes_read);
 	printf("\n");
-	dump_registers(stdout);
+	registers.dump_registers(stdout);
 }

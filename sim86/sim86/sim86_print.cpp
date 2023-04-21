@@ -95,4 +95,6 @@ void print_instruction(FILE* stream, instruction instr) {
 		} break;
 		}
 	}
+
+	fprintf(stream, " ; ");
 }
