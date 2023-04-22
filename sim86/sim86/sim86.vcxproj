@@ -151,6 +151,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="instruction.h" />
+    <ClInclude Include="memory.h" />
     <ClInclude Include="registers.h" />
     <ClInclude Include="sim86.h" />
     <ClInclude Include="sim86_decode.h" />

@@ -1,3 +1,3 @@
 #pragma once
 
-instruction decode_instruction(u8* ptr);
+instruction decode_instruction(Memory memory);

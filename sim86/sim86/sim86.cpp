@@ -3,20 +3,19 @@
 #include <string.h>
 
 #include "sim86.h"
+#include "memory.h"
 #include "instruction.h"
 #include "sim86_print.h"
 #include "sim86_decode.h"
 
-void disassemble(u8* memory, size_t byte_count) {
+void disassemble(Memory memory, size_t byte_count) {
 	while (registers.IP < byte_count) {
-		instruction instr = decode_instruction(memory + registers.IP);
+		instruction instr = decode_instruction(memory);
 		if (instr.op) {
-			if (registers.IP + instr.size > byte_count) {
+			if (registers.IP > byte_count) {
 				fprintf(stderr, "ERROR: Instruction extends outside disassembly region.\n");
 				break;
 			}
-			
-			registers.IP += instr.size;
 
 			print_instruction(stdout, instr);
 			execute_instruction(instr);
@@ -29,12 +28,12 @@ void disassemble(u8* memory, size_t byte_count) {
 	}
 }
 
-size_t load_memory_from_file(const char* path, u8* memory, size_t size) {
+size_t load_memory_from_file(const char* path, Memory memory) {
 	FILE* file;
 	fopen_s(&file, path, "rb");
 
 	if (file) {
-		size_t read = fread(memory, 1, size, file);
+		size_t read = fread(&memory(registers.CS, 0), 1, memory.m_size, file);
 		fclose(file);
 		return read;
 	}
@@ -45,21 +44,37 @@ size_t load_memory_from_file(const char* path, u8* memory, size_t size) {
 }
 
 int main(int argc, char* argv[]) {
-	u8* memory = (u8*)malloc(1024 * 1024);
-	if (!memory) {
+	Memory memory;
+	if (!memory.allocate(1024 * 1024)) {
 		fprintf(stderr, "ERROR: Failed to allocate main memory for 8086.\n");
 		return -1;
 	}
 
+	/* Set up segment registers.
+	*   0x0      0x10000   0x20000  0x30000 ... 0x100000
+	*	+--------+---------+--------+------
+	*	|  code  |  stack  |  data  |
+	*	+--------+---------+--------+------
+	*   ^- CS    ^- SS     ^- DS/ES
+	* Code is loaded into memory starting from address 0.
+	* After the code comes the 64k stack segment
+	* Finally the 64k data segment starts at 0x20000.
+	* The extra segment (ES) is initialized to point DS;
+	*/
+	registers.CS = 0x00000;
+	registers.SS = 0x10000;
+	registers.DS = 0x20000;
+	registers.ES = registers.DS;
+
 #ifdef _DEBUG
-	size_t bytes_read = load_memory_from_file(LISTING_50, memory, 1024 * 1024);
+	size_t bytes_read = load_memory_from_file(LISTING_50, memory);
 #else
 	if (argc != 2) {
 		fprintf(stderr, "USAGE: %s [8086 machine code file]\n", argv[0]);
 		return -1;
 	}
 
-	u32 bytes_read = load_memory_from_file(argv[1], memory, 1024 * 1024);
+	u32 bytes_read = load_memory_from_file(argv[1], memory);
 	if (bytes_read == -1) { return -1; }
 #endif
 	

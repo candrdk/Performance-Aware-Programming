@@ -1,4 +1,5 @@
 #include "sim86.h"
+#include "memory.h"
 #include "sim86_instruction_table.h"
 
 struct decode_context {
@@ -6,31 +7,28 @@ struct decode_context {
 	reg16_t default_segment;
 };
 
-u32 parse_data_value(u8** ptr, bool exists, bool wide, bool sign_extended) {
+u32 parse_data_value(Memory memory, bool exists, bool wide, bool sign_extended) {
 	u32 result = 0;
 
 	if (exists) {
 		if (wide) {
-			u8 lo = (*ptr)[0];
-			u8 hi = (*ptr)[1];
+			u8 lo = memory(registers.CS, registers.IP++);
+			u8 hi = memory(registers.CS, registers.IP++);
 			result = (hi << 8) | lo;
-			*ptr += 2;
 		}
 		else {
-			result = **ptr;
+			result = memory(registers.CS, registers.IP++);
 			if (sign_extended) {
 				result = (i32)*(i8*)&result;
 			}
-			*ptr += 1;
 		}
 	}
 
 	return result;
 }
 
-instruction try_decode(decode_context* context, instruction_encoding* encoding, u8* ptr) {
-	//TODO: proper addressing
-	u32 starting_address = (u32)(uintptr_t)ptr;
+instruction try_decode(Memory memory, decode_context* context, instruction_encoding* encoding) {
+	u32 starting_address = memory.physical_address(registers.CS, registers.IP);
 	instruction result = {};
 	bool valid = true;
 
@@ -51,7 +49,7 @@ instruction try_decode(decode_context* context, instruction_encoding* encoding, 
 			// If we have no left-over bits, read a new byte
 			if (bits_pending_count == 0) {
 				bits_pending_count = 8;
-				bits_pending = *ptr++;
+				bits_pending = memory(registers.CS, registers.IP++);
 			}
 
 			assert(test_bits.count <= bits_pending_count);
@@ -86,12 +84,12 @@ instruction try_decode(decode_context* context, instruction_encoding* encoding, 
 		bool wide_displacement = bits[Bits_DispAlwaysW] || (MOD == 0b10) || has_direct_address;
 		bool wide_data = bits[Bits_WMakesDataW] && !S && W;
 
-		bits[Bits_Disp] |= parse_data_value(&ptr, has[Bits_Disp], wide_displacement, !wide_displacement);
-		bits[Bits_Data] |= parse_data_value(&ptr, has[Bits_Data], wide_data, S);
+		bits[Bits_Disp] |= parse_data_value(memory, has[Bits_Disp], wide_displacement, !wide_displacement);
+		bits[Bits_Data] |= parse_data_value(memory, has[Bits_Data], wide_data, S);
 
 		result = {
 			.address = starting_address,
-			.size = (u32)(uintptr_t)ptr - starting_address,
+			.size = memory.physical_address(registers.CS, registers.IP) - starting_address,
 			.op = encoding->op,
 			.flags = context->flags,
 			.segment_override = context->default_segment
@@ -174,24 +172,26 @@ instruction try_decode(decode_context* context, instruction_encoding* encoding, 
 	return result;
 }
 
-instruction decode_instruction(u8* ptr) {
+instruction decode_instruction(Memory memory) {
 	//TODO: fix this to calculate proper absolute address.
 	decode_context context = {};
 	instruction result = {};
 
-	u32 start_address = ((uintptr_t)ptr & 0xFFFFFFFF);
+	u16 start_IP = registers.IP;
 
 	u32 bytes_read = 0;
 	while (bytes_read < 15) {	// intel specified maximum possible length of instruction
 		result = {};
 		for (u32 i = 0; i < (sizeof(instruction_table) / sizeof(instruction_table[0])); i++) {
 			instruction_encoding inst = instruction_table[i];
-			result = try_decode(&context, &inst, ptr);
+			result = try_decode(memory, &context, &inst);
 
 			if (result.op) {
-				ptr += result.size;
 				bytes_read += result.size;
 				break;
+			}
+			else {
+				registers.IP = start_IP;
 			}
 		}
 
@@ -211,7 +211,7 @@ instruction decode_instruction(u8* ptr) {
 	}
 
 	if (bytes_read <= 15) {
-		result.address = start_address;
+		result.address = memory.physical_address(registers.CS, start_IP);
 		result.size = bytes_read;
 	}
 	else {
