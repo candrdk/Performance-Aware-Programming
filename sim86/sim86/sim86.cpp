@@ -3,14 +3,14 @@
 #include <string.h>
 
 #include "sim86.h"
-#include "memory.h"
 #include "instruction.h"
+#include "memory.h"
 #include "sim86_print.h"
 #include "sim86_decode.h"
 
-void disassemble(Memory memory, size_t byte_count) {
+void disassemble(size_t byte_count) {
 	while (registers.IP < byte_count) {
-		instruction instr = decode_instruction(memory);
+		instruction instr = decode_instruction();
 		if (instr.op) {
 			if (registers.IP > byte_count) {
 				fprintf(stderr, "ERROR: Instruction extends outside disassembly region.\n");
@@ -28,59 +28,48 @@ void disassemble(Memory memory, size_t byte_count) {
 	}
 }
 
-size_t load_memory_from_file(const char* path, Memory memory) {
-	FILE* file;
-	fopen_s(&file, path, "rb");
-
-	if (file) {
-		size_t read = fread(&memory(registers.CS, 0), 1, memory.m_size, file);
-		fclose(file);
-		return read;
-	}
-	else {
-		fprintf(stderr, "ERROR: Unable to open %s.\n", path);
-		return -1;
-	}
-}
-
 int main(int argc, char* argv[]) {
-	Memory memory;
 	if (!memory.allocate(1024 * 1024)) {
 		fprintf(stderr, "ERROR: Failed to allocate main memory for 8086.\n");
 		return -1;
 	}
 
 	/* Set up segment registers.
-	*   0x0      0x10000   0x20000  0x30000 ... 0x100000
-	*	+--------+---------+--------+------
-	*	|  code  |  stack  |  data  |
-	*	+--------+---------+--------+------
-	*   ^- CS    ^- SS     ^- DS/ES
+	* Physical address:		0x0      0x10000   0x20000  0x30000 ... 0x100000
+	*						+--------+---------+--------+------
+	*						|  code  |  stack  |  data  |
+	*						+--------+---------+--------+------
+	* Segment bases:	    
+	*	CS = 0x0000 SS = 0x1000 DS = 0x2000
+	* 
+	* Physical address calculated by shifting up the segment base and adding an
+	* offset. Thus, SS starts at the physical address: 0x1000 << 4 = 0x10000
+	* 
 	* Code is loaded into memory starting from address 0.
 	* After the code comes the 64k stack segment
 	* Finally the 64k data segment starts at 0x20000.
 	* The extra segment (ES) is initialized to point DS;
 	*/
-	registers.CS = 0x00000;
-	registers.SS = 0x10000;
-	registers.DS = 0x20000;
+	registers.CS = 0x0000;
+	registers.SS = 0x1000;
+	registers.DS = 0x2000;
 	registers.ES = registers.DS;
 
 #ifdef _DEBUG
-	size_t bytes_read = load_memory_from_file(LISTING_50, memory);
+	size_t bytes_read = memory.load_from_file(LISTING_52, registers.CS, registers.IP);
 #else
 	if (argc != 2) {
 		fprintf(stderr, "USAGE: %s [8086 machine code file]\n", argv[0]);
 		return -1;
 	}
 
-	u32 bytes_read = load_memory_from_file(argv[1], memory);
+	size_t bytes_read = memory.load_from_file(argv[1], registers.CS, registers.IP);
 	if (bytes_read == -1) { return -1; }
 #endif
 	
 	printf("; %s disassembly:\n", argv[1]);
 	printf("bits 16\n");
-	disassemble(memory, bytes_read);
+	disassemble(bytes_read);
 	printf("\n");
 	registers.dump_registers(stdout);
 }

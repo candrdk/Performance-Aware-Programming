@@ -30,6 +30,9 @@
     <ClCompile Include="registers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="memory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="sim86_instruction_table.inl">

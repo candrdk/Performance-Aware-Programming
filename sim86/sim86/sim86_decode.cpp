@@ -1,6 +1,6 @@
 #include "sim86.h"
-#include "memory.h"
 #include "sim86_instruction_table.h"
+#include "memory.h"
 
 struct decode_context {
 	u32 flags;
@@ -27,7 +27,7 @@ u32 parse_data_value(Memory memory, bool exists, bool wide, bool sign_extended) 
 	return result;
 }
 
-instruction try_decode(Memory memory, decode_context* context, instruction_encoding* encoding) {
+instruction try_decode(decode_context* context, instruction_encoding* encoding) {
 	u32 starting_address = memory.physical_address(registers.CS, registers.IP);
 	instruction result = {};
 	bool valid = true;
@@ -172,8 +172,7 @@ instruction try_decode(Memory memory, decode_context* context, instruction_encod
 	return result;
 }
 
-instruction decode_instruction(Memory memory) {
-	//TODO: fix this to calculate proper absolute address.
+instruction decode_instruction() {
 	decode_context context = {};
 	instruction result = {};
 
@@ -184,7 +183,7 @@ instruction decode_instruction(Memory memory) {
 		result = {};
 		for (u32 i = 0; i < (sizeof(instruction_table) / sizeof(instruction_table[0])); i++) {
 			instruction_encoding inst = instruction_table[i];
-			result = try_decode(memory, &context, &inst);
+			result = try_decode(&context, &inst);
 
 			if (result.op) {
 				bytes_read += result.size;

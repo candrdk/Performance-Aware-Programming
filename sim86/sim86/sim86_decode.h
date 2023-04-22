@@ -1,3 +1,3 @@
 #pragma once
 
-instruction decode_instruction(Memory memory);
+instruction decode_instruction();

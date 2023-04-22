@@ -17,6 +17,9 @@
 #define LISTING_48 "..\\computer_enhance\\perfaware\\part1\\listing_0048_ip_register"
 #define LISTING_49 "..\\computer_enhance\\perfaware\\part1\\listing_0049_conditional_jumps"
 #define LISTING_50 "..\\computer_enhance\\perfaware\\part1\\listing_0050_challenge_jumps"
+#define LISTING_51 "..\\computer_enhance\\perfaware\\part1\\listing_0051_memory_mov"
+#define LISTING_52 "..\\computer_enhance\\perfaware\\part1\\listing_0052_memory_add_loop"
+
 
 typedef uint8_t u8;
 typedef uint16_t u16;

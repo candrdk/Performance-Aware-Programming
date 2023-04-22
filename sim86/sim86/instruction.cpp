@@ -1,4 +1,5 @@
 #include "instruction.h"
+#include "memory.h"
 #include <intrin.h>
 
 void (*exec_op_table[Op_Count])(instruction) = {
@@ -12,19 +13,29 @@ void execute_instruction(instruction instr) {
 	exec_op_table[instr.op](instr);
 }
 
-u16 load_op_value(instruction_operand op) {
+u16 load_op(instruction instr, u16 operand) {
+	instruction_operand op = instr.operands[operand];
 	switch (op.type) {
 		case operand_type::REGISTER:
 			return op.Register.wide ? registers[reg16_t(op.Register.reg)] : registers[reg8_t(op.Register.reg)];
 		case operand_type::IMMEDIATE:
 			return op.Immediate.value;
-		case operand_type::MEMORY:
-			assert(false); //TODO: not implemented
-			break;
+		case operand_type::MEMORY: {
+			u32 address = memory.physical_address(op.Address);
+			if (instr.flags & Inst_Wide) {
+				u16 lo = memory(address);
+				u16 hi = memory(address + 1);
+				return (hi << 8) | lo;
+			}
+			else {
+				return memory(address);
+			}
+		}
 	}
 }
 
-void store_op_value(instruction_operand op, u16 res) {
+void store_op(instruction instr, u16 operand, u16 res) {
+	instruction_operand op = instr.operands[operand];
 	switch (op.type) {
 		case operand_type::REGISTER: {
 			// printing
@@ -44,14 +55,22 @@ void store_op_value(instruction_operand op, u16 res) {
 		}
 
 		case operand_type::MEMORY: {
-			assert(false); //TODO: not implemented
+			u32 address = memory.physical_address(op.Address);
+			if (instr.flags & Inst_Wide) {
+				memory(address) = res & 0xFF;	// lo
+				memory(address + 1) = res >> 8;	// hi
+			} 
+			else {
+				memory(address) = res & 0xFF;
+			}
+			break;
 		}
 	}
 }
 
 void exec_mov(instruction instr) {
-	u16 value = load_op_value(instr.operands[1]);
-	store_op_value(instr.operands[0], value);
+	u16 value = load_op(instr, 1);
+	store_op(instr, 0, value);
 
 	// print IP
 	printf("ip:0x%x->0x%x ", registers.IP - instr.size, registers.IP);
@@ -76,8 +95,8 @@ void exec_add(instruction instr) {
 	registers.flags_dbg_str(flag_str);
 
 	// load operand values
-	u16 dst = load_op_value(instr.operands[0]);
-	u16 src = load_op_value(instr.operands[1]);
+	u16 dst = load_op(instr, 0);
+	u16 src = load_op(instr, 1);
 	u32 res = dst + src;
 
 	// update flags
@@ -101,7 +120,7 @@ void exec_add(instruction instr) {
 	}
 
 	// store the result
-	store_op_value(instr.operands[0], res);
+	store_op(instr, 0, res);
 
 	// print IP
 	printf("ip:0x%x->0x%x ", registers.IP - instr.size, registers.IP);
@@ -124,8 +143,8 @@ void exec_sub(instruction instr) {
 	registers.flags_dbg_str(flag_str);
 
 	// load operand values
-	u16 dst = load_op_value(instr.operands[0]);
-	u16 src = load_op_value(instr.operands[1]);
+	u16 dst = load_op(instr, 0);
+	u16 src = load_op(instr, 1);
 	u32 res = dst - src;
 
 	// update flags
@@ -149,7 +168,7 @@ void exec_sub(instruction instr) {
 	}
 
 	// store the result
-	store_op_value(instr.operands[0], res);
+	store_op(instr, 0, res);
 	
 	// print IP
 	printf("ip:0x%x->0x%x ", registers.IP - instr.size, registers.IP);
@@ -171,8 +190,8 @@ void exec_cmp(instruction instr) {
 	registers.flags_dbg_str(flag_str);
 
 	// load operand values
-	u16 dst = load_op_value(instr.operands[0]);
-	u16 src = load_op_value(instr.operands[1]);
+	u16 dst = load_op(instr, 0);
+	u16 src = load_op(instr, 1);
 	u32 res = dst - src;
 
 	// update flags

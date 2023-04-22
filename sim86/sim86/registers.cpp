@@ -2,11 +2,23 @@
 
 #include "registers.h"
 
-u8& Registers::operator[](reg8_t reg) { assert(reg < 8); return reg < 4 ? regs[reg].reg8_l : regs[reg - 4].reg8_h; };
-const u8& Registers::operator[](reg8_t reg) const { assert(reg < 8); return reg < 4 ? regs[reg].reg8_l : regs[reg - 4].reg8_h; };
+u8& Registers::operator[](reg8_t reg) { 
+	assert(reg < 8); 
+	return reg < 4 ? regs[reg].reg8_l : regs[reg - 4].reg8_h; 
+};
+const u8& Registers::operator[](reg8_t reg) const { 
+	assert(reg < 8); 
+	return reg < 4 ? regs[reg].reg8_l : regs[reg - 4].reg8_h; 
+};
 
-u16& Registers::operator[](reg16_t reg) { assert(reg < REG_COUNT); return regs[reg].reg16; };
-const u16& Registers::operator[](reg16_t reg) const { assert(reg < REG_COUNT); return regs[reg].reg16; };
+u16& Registers::operator[](reg16_t reg) { 
+	assert(reg < REG_COUNT); 
+	return regs[reg].reg16; 
+};
+const u16& Registers::operator[](reg16_t reg) const { 
+	assert(reg < REG_COUNT); 
+	return regs[reg].reg16; 
+};
 
 bool Registers::operator[](flag_t flag) { 
 	assert((flag & ALL_FLAGS) && !(flag & (~ALL_FLAGS)));
