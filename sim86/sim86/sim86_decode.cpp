@@ -176,10 +176,11 @@ instruction decode_instruction() {
 	decode_context context = {};
 	instruction result = {};
 
-	u16 start_IP = registers.IP;
+	u32 start_address = memory.physical_address(registers.CS, registers.IP);
 
 	u32 bytes_read = 0;
 	while (bytes_read < 15) {	// intel specified maximum possible length of instruction
+		u16 start_IP = registers.IP;
 		result = {};
 		for (u32 i = 0; i < (sizeof(instruction_table) / sizeof(instruction_table[0])); i++) {
 			instruction_encoding inst = instruction_table[i];
@@ -210,7 +211,7 @@ instruction decode_instruction() {
 	}
 
 	if (bytes_read <= 15) {
-		result.address = memory.physical_address(registers.CS, start_IP);
+		result.address = start_address;
 		result.size = bytes_read;
 	}
 	else {

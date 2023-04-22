@@ -21,6 +21,10 @@ u16 load_op(instruction instr, u16 operand) {
 		case operand_type::IMMEDIATE:
 			return op.Immediate.value;
 		case operand_type::MEMORY: {
+			if (instr.flags & Inst_Segment) {
+				op.Address.segment = instr.segment_override;
+				op.Address.explicit_segment = true;
+			}
 			u32 address = memory.physical_address(op.Address);
 			if (instr.flags & Inst_Wide) {
 				u16 lo = memory(address);
@@ -55,6 +59,10 @@ void store_op(instruction instr, u16 operand, u16 res) {
 		}
 
 		case operand_type::MEMORY: {
+			if (instr.flags & Inst_Segment) {
+				op.Address.segment = instr.segment_override;
+				op.Address.explicit_segment = true;
+			}
 			u32 address = memory.physical_address(op.Address);
 			if (instr.flags & Inst_Wide) {
 				memory(address) = res & 0xFF;	// lo
