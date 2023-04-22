@@ -11,7 +11,9 @@ struct Memory {
 	u8& operator()(u32 address);
 
 	bool allocate(u32 size);
+
 	size_t load_from_file(const char* path, u16 segment, u16 offset);
+	size_t dump_to_file(const char* file_name);
 };
 
 extern Memory memory;

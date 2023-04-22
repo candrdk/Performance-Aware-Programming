@@ -56,7 +56,7 @@ int main(int argc, char* argv[]) {
 	registers.ES = registers.DS;
 
 #ifdef _DEBUG
-	size_t bytes_read = memory.load_from_file(LISTING_52, registers.CS, registers.IP);
+	size_t bytes_read = memory.load_from_file(LISTING_55, registers.CS, registers.IP);
 #else
 	if (argc != 2) {
 		fprintf(stderr, "USAGE: %s [8086 machine code file]\n", argv[0]);
@@ -72,4 +72,12 @@ int main(int argc, char* argv[]) {
 	disassemble(bytes_read);
 	printf("\n");
 	registers.dump_registers(stdout);
+
+	size_t bytes_written = memory.dump_to_file("memory.DATA");
+	if (bytes_written != memory.m_size) {
+		fprintf(stderr, "ERROR: Failed to dump memory. Wrote %d of %d bytes", bytes_written, memory.m_size);
+		return -1;
+	}
+
+	return 0;
 }

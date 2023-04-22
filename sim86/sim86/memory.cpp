@@ -56,3 +56,17 @@ size_t Memory::load_from_file(const char* path, u16 segment, u16 offset) {
 		return -1;
 	}
 }
+
+size_t Memory::dump_to_file(const char* file_name) {
+	FILE* file;
+	fopen_s(&file, file_name, "wb");
+
+	if (file) {
+		size_t written = fwrite(m_memory, 1, m_size, file);
+		fclose(file);
+		return written;
+	}
+	else {
+		fprintf(stderr, "ERROR: Unable to open %s.\n", file_name);
+	}
+}
