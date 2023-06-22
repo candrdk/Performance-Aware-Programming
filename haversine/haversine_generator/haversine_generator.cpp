@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
 
     printf("]}");
 
-    printf("\nsum: %f\n", sum / count);
+    //printf("\nsum: %f\n", sum / count);
 
     return 0;
 }
