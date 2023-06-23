@@ -42,7 +42,7 @@ static double ReferenceHaversine(double X0, double Y0, double X1, double Y1, dou
 
 int main(int argc, char* argv[]) {
     if (argc < 3) {
-        printf("Usage: haversine_generator [seed] [count]");
+        printf("Usage: haversine_generator [seed] [count] [1: json, 0: sum]");
         return 0;
     }
 
@@ -56,7 +56,11 @@ int main(int argc, char* argv[]) {
     
     double sum = 0.0;
 
-    printf("{\"pairs\":[\n");
+    bool printJSON = (argc == 4) && (argv[3][0] == '0');
+
+    if (printJSON) {
+        printf("{\"pairs\":[\n");
+    }
 
     for (int i = 0; i < count; i++) {
         // https://mathworld.wolfram.com/SpherePointPicking.html
@@ -77,13 +81,20 @@ int main(int argc, char* argv[]) {
         y0 = 57.2958 * (y0 - 0.5 * 3.1415);
         y1 = 57.2958 * (y1 - 0.5 * 3.1415);
 
-        printf("{\"x0\":%f, \"y0\":%f, \"x1\":%f, \"y1\":%f}%c\n", x0, y0, x1, y1, i == count - 1 ? ' ' : ',');
+        if (printJSON) {
+            printf("{\"x0\":%f, \"y0\":%f, \"x1\":%f, \"y1\":%f}%c\n", x0, y0, x1, y1, i == count - 1 ? ' ' : ',');
+        }
+
         sum += ReferenceHaversine(x0, y0, x1, y1, 6372.8);
     }
 
-    printf("]}");
+    if (printJSON) {
+        printf("]}");
+    }
 
-    //printf("\nsum: %f\n", sum / count);
+    if (!printJSON) {
+        printf("\nsum: %f\n", sum / count);
+    }
 
     return 0;
 }
