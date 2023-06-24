@@ -136,7 +136,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Buffer.h" />
+    <ClInclude Include="JSON.h" />
     <ClInclude Include="ReferenceHaversine.h" />
+    <ClInclude Include="Timers.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

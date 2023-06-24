@@ -29,5 +29,11 @@
     <ClInclude Include="ReferenceHaversine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="JSON.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Timers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
