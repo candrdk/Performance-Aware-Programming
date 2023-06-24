@@ -112,7 +112,7 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "ERROR: Unable to open \"%s\".\n", argv[1]);
     }
 
-    EstimateCPUFreq();
+    EstimateCPUFreq(true);
 
     return 0;
 }
