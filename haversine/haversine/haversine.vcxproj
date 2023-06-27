@@ -130,12 +130,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="haversine.cpp" />
+    <ClCompile Include="Instrumentation.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="Buffer.natvis" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Buffer.h" />
+    <ClInclude Include="Instrumentation.h" />
     <ClInclude Include="JSON.h" />
     <ClInclude Include="ReferenceHaversine.h" />
     <ClInclude Include="Timers.h" />
